@@ -28,3 +28,4 @@ A simple HarmonyOS ArkUI (ArkTS) sample app with:
 - Add a second page and route navigation
 - Integrate `@ohos.net.http`
 - Persist data locally
+https://contentcenter-vali-drcn.dbankcdn.cn/pvt_2/DeveloperAlliance_package_901_9/9b/v3/0fdyewgcSaSmJXn-PCNYXg/devecostudio-windows-6.0.1.251.zip?HW-CC-KV=V1&HW-CC-Date=20260414T125825Z&HW-CC-Expire=7200&HW-CC-Sign=1BD0E8F162D0324776A4246BB7E03D0F0BD790CE6D8F811A2CC4E70DACFACBF1
