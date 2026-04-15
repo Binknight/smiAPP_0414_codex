@@ -1,0 +1,30 @@
+# HarmonyArkUIDemo
+
+A simple HarmonyOS ArkUI (ArkTS) sample app with:
+
+- A home screen header
+- A button click counter
+- A checklist with toggle state
+
+## Files
+
+- `AppScope/app.json5`: app-level metadata
+- `entry/src/main/ets/pages/Index.ets`: main ArkUI page
+- `entry/src/main/ets/entryability/EntryAbility.ets`: entry ability
+- `entry/src/main/module.json5`: module config
+
+## Run
+
+1. Open `HarmonyArkUIDemo` in DevEco Studio.
+2. Add or replace the signing files under `AppScope`:
+   - `debug.p12`
+   - `debug.cer`
+   - `debug.p7b`
+3. If your SDK version is not `5.0.0(12)`, update the root `build-profile.json5`.
+4. Run on an emulator or device.
+
+## Next steps
+
+- Add a second page and route navigation
+- Integrate `@ohos.net.http`
+- Persist data locally

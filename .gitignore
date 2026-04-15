@@ -1,0 +1,14 @@
+.hvigor
+.idea
+.vscode
+build
+local.properties
+node_modules
+*.hap
+*.hsp
+*.har
+*.keystore
+*.jks
+*.p12
+*.p7b
+*.cer
