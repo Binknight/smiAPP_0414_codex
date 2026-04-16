@@ -1,0 +1,50 @@
+{
+  "app": {
+    "products": [
+      {
+        "name": "default",
+        "signingConfig": "default",
+        "compatibleSdkVersion": "6.0.2(22)",
+        "runtimeOS": "HarmonyOS",
+        "targetSdkVersion": "6.0.2(22)"
+      }
+    ],
+    "buildModeSet": [
+      {
+        "name": "debug"
+      },
+      {
+        "name": "release"
+      }
+    ],
+    "signingConfigs": [
+      {
+        "name": "default",
+        "type": "HarmonyOS",
+        "material": {
+          "certpath": "C:\\Users\\ttelab\\.ohos\\config\\default_HarmonyArkUIDemo__PGa8l51uTNRxmyDU8J_7iRlNZ2sQJ1tdzm6JseuOSw=.cer",
+          "keyAlias": "debugKey",
+          "keyPassword": "0000001B9130A8B1296B312C44C4A0A78E6F12ED557D321479B2F5BF53AFBC370CDF8E0CD55D8194394E59",
+          "profile": "C:\\Users\\ttelab\\.ohos\\config\\default_HarmonyArkUIDemo__PGa8l51uTNRxmyDU8J_7iRlNZ2sQJ1tdzm6JseuOSw=.p7b",
+          "signAlg": "SHA256withECDSA",
+          "storeFile": "C:\\Users\\ttelab\\.ohos\\config\\default_HarmonyArkUIDemo__PGa8l51uTNRxmyDU8J_7iRlNZ2sQJ1tdzm6JseuOSw=.p12",
+          "storePassword": "0000001B84FDD04D0FF3D1F22B2DB6F45A7D18E47E39DDAC0B295A1DEFBC3B1B40FCB9FA671763CB3ED1EE"
+        }
+      }
+    ]
+  },
+  "modules": [
+    {
+      "name": "entry",
+      "srcPath": "./entry",
+      "targets": [
+        {
+          "name": "default",
+          "applyToProducts": [
+            "default"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "string": [
+    {
+      "name": "app_name",
+      "value": "Explore Flow"
+    },
+    {
+      "name": "module_desc",
+      "value": "Content consumption simulation app built with ArkUI."
+    },
+    {
+      "name": "entry_desc",
+      "value": "Explore Flow main entry ability."
+    }
+  ]
+}
