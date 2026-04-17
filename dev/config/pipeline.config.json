@@ -10,7 +10,7 @@
   },
   "git": {
     "remote_name": "origin",
-    "remote_url": "https://github.com/Binknight/smiAPP_0414_codex",
+    "remote_url": "https://github.com/Binknight/smiAPP_0414_codex.git",
     "default_base_branch": "main",
     "scenario_branch_format": "prod-{app_segment}-app-scenario-{scenario_id}",
     "scenario_id_padding": 3,
@@ -54,7 +54,7 @@
       "codex_cli": {
         "display_name": "Codex CLI",
         "command": [
-          "codex",
+          "codex.cmd",
           "exec",
           "--yolo",
           "{{TASK_PROMPT}}"
@@ -70,7 +70,7 @@
   },
   "scheduler": {
     "poll_interval_seconds": 60,
-    "max_cycles": 240,
+    "max_cycles": 60,
     "success_values": [
       "success",
       "succeeded",
@@ -86,14 +86,12 @@
       "entry",
       "hvigor",
       "specs",
-      "dev",
       "README.md",
       "build.ps1",
       "build.bat",
       "build-profile.json5",
       "hvigorfile.ts",
-      "oh-package.json5",
-      "scenario1.json"
+      "oh-package.json5"
     ]
   }
 }
