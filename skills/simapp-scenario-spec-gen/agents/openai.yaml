@@ -1,0 +1,4 @@
+interface:
+  display_name: "SimApp Scenario Spec Gen"
+  short_description: "Generate incremental scenario restoration specs"
+  default_prompt: "Use $simapp-scenario-spec-gen to analyze a scenario JSON and draft an incremental development spec for this repo."
