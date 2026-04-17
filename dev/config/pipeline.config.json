@@ -1,0 +1,99 @@
+{
+  "paths": {
+    "repo_root": ".",
+    "default_input_json": "scenario1.json",
+    "task_template": "dev/config/task_template.txt",
+    "mock_data_root": "dev/mock-data",
+    "result_root": "dev/output",
+    "logs_root": "dev/logs",
+    "state_root": "dev/state"
+  },
+  "git": {
+    "remote_name": "origin",
+    "remote_url": "https://github.com/Binknight/smiAPP_0414_codex",
+    "default_base_branch": "main",
+    "scenario_branch_format": "prod-{app_segment}-app-scenario-{scenario_id}",
+    "scenario_id_padding": 3,
+    "fetch_all_known_branches": true,
+    "app_types": {
+      "generic": {
+        "display_name": "通用类APP",
+        "aliases": [
+          "generic",
+          "common",
+          "main",
+          "general"
+        ],
+        "base_branch": "main",
+        "app_segment": "generic"
+      },
+      "explore": {
+        "display_name": "内容类APP",
+        "aliases": [
+          "explore",
+          "content"
+        ],
+        "base_branch": "prod-explore-app",
+        "app_segment": "explore"
+      },
+      "travel": {
+        "display_name": "旅游类APP",
+        "aliases": [
+          "travel",
+          "trip",
+          "tour"
+        ],
+        "base_branch": "prod-travel-app",
+        "app_segment": "travel"
+      }
+    }
+  },
+  "agent": {
+    "active": "codex_cli",
+    "definitions": {
+      "codex_cli": {
+        "display_name": "Codex CLI",
+        "command": [
+          "codex",
+          "exec",
+          "--yolo",
+          "{{TASK_PROMPT}}"
+        ],
+        "env": {},
+        "supports_resume": false
+      }
+    }
+  },
+  "build": {
+    "command": "powershell -ExecutionPolicy Bypass -File .\\build.ps1",
+    "readme_reference": "README.md"
+  },
+  "scheduler": {
+    "poll_interval_seconds": 60,
+    "max_cycles": 240,
+    "success_values": [
+      "success",
+      "succeeded",
+      "ok",
+      "passed",
+      "true"
+    ],
+    "commit_message_template": "feat: automate {scenario_branch}"
+  },
+  "commit": {
+    "include_paths": [
+      "AppScope",
+      "entry",
+      "hvigor",
+      "specs",
+      "dev",
+      "README.md",
+      "build.ps1",
+      "build.bat",
+      "build-profile.json5",
+      "hvigorfile.ts",
+      "oh-package.json5",
+      "scenario1.json"
+    ]
+  }
+}
