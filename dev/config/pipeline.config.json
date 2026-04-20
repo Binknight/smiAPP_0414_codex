@@ -85,7 +85,7 @@
       "AppScope",
       "entry",
       "hvigor",
-      "specs",
+      "dev/spec",
       "README.md",
       "build.ps1",
       "build.bat",

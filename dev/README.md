@@ -6,6 +6,7 @@
 
 - `config/pipeline.config.json`：主配置文件，维护 APP 类型与 Git 分支映射、Agent 定义、构建命令、轮询策略、提交路径等。
 - `config/task_template.txt`：下发给 Agent 的任务模板，脚本会按场景动态实例化。
+- `spec/`：场景 spec 默认输出目录。`skills/simapp-scenario-spec-gen` 生成的 `.spec.md` 文件默认保存到这里，并纳入自动提交白名单。
 - `scripts/run_pipeline.py`：执行 step1-step3。读取场景 JSON，选择 APP 类型分支，创建场景分支，并下发 Agent 任务。
 - `scripts/monitor_results.py`：执行 step4。轮询结果 JSON，判断构建是否成功，然后自动提交并推送分支。
 - `mock-data/`：约定的 mock 数据目录。Agent 开发任务需要将模拟数据拆成独立 JSON 文件放到这里。

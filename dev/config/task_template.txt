@@ -18,7 +18,7 @@
 
 任务要求：
 
-1. 调用 `skills/simapp-scenario-spec-gen` skill 生成 APP 开发 spec，并将 spec 文件保存到仓库内。
+1. 调用 `skills/simapp-scenario-spec-gen` skill 生成 APP 开发 spec，并将 spec 文件保存到仓库内 `dev/spec` 目录下。
 2. 基于 app spec 制定仿真 APP 开发计划，并按计划直接实施开发。
 3. 所有相关数据源采用 mock 方式，拆分为各自独立的 JSON 文件，并统一放在 `{{MOCK_DATA_DIR}}` 目录下，便于后期维护。
 4. 开发任务完成后，严格按照 `README.md` 的编译构建指导执行出包；过程中遇到的错误必须继续排查并修复，直到编译构建成功才算完成。
