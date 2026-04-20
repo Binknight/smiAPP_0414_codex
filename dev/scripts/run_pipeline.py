@@ -153,12 +153,74 @@ def json_dumps(payload: dict[str, Any]) -> str:
     return json.dumps(payload, ensure_ascii=False, indent=2)
 
 
+def build_powershell_here_string(content: str) -> str:
+    lines = content.splitlines()
+    if content.endswith(("\n", "\r")):
+        lines.append("")
+
+    chunks: list[str] = []
+    current: list[str] = []
+    quote_mode = "single"
+
+    def flush_current() -> None:
+        if not current:
+            return
+        if quote_mode == "single":
+            chunks.append("@'\n" + "\n".join(current) + "\n'@")
+        else:
+            chunks.append('@\"\n' + "\n".join(current) + '\n\"@')
+        current.clear()
+
+    for line in lines:
+        if line == "'@":
+            flush_current()
+            chunks.append('"\'@"')
+            quote_mode = "double"
+            continue
+        if line == '"@':
+            flush_current()
+            chunks.append("'\"@'")
+            quote_mode = "single"
+            continue
+        current.append(line)
+
+    flush_current()
+    if not chunks:
+        return "@'\n'@"
+    return " + [Environment]::NewLine + ".join(chunks)
+
+
+def wrap_codex_command_with_powershell(command: list[str]) -> list[str]:
+    if len(command) < 4 or command[:3] != ["codex.cmd", "exec", "--yolo"]:
+        return command
+
+    task_prompt = command[3]
+    if "\n" not in task_prompt and "\r" not in task_prompt:
+        return command
+
+    prompt_literal = build_powershell_here_string(task_prompt)
+    script = (
+        f"$taskPrompt = {prompt_literal}; "
+        "& codex.cmd exec --yolo $taskPrompt"
+    )
+    return ["powershell", "-NoProfile", "-Command", script]
+
+
+def summarize_agent_command(command: list[str]) -> str:
+    if len(command) >= 4 and command[:3] == ["powershell", "-NoProfile", "-Command"]:
+        script = command[3]
+        if script.startswith("$taskPrompt = ") and "& codex.cmd exec --yolo $taskPrompt" in script:
+            return "powershell -NoProfile -Command <here-string taskPrompt> -> codex.cmd exec --yolo $taskPrompt"
+    return format_command(command)
+
+
 def instantiate_agent_command(
     agent_definition: dict[str, Any],
     task_prompt: str,
 ) -> tuple[list[str], dict[str, str]]:
     variables = {"TASK_PROMPT": task_prompt}
     command = [render_template(str(part), variables) for part in agent_definition["command"]]
+    command = wrap_codex_command_with_powershell(command)
     env = {
         key: render_template(str(value), variables)
         for key, value in agent_definition.get("env", {}).items()
@@ -174,7 +236,7 @@ def dispatch_agent(
     logger: Any,
     dry_run: bool,
 ) -> dict[str, Any]:
-    logger.info("即将下发 Agent 任务: %s", format_command(agent_command))
+    logger.info("即将下发 Agent 任务: %s", summarize_agent_command(agent_command))
     if dry_run:
         state["status"] = "dry_run"
         state["agent"] = {
