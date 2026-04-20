@@ -18,6 +18,7 @@ from common import (
     infer_scenario_id,
     is_process_running,
     load_runtime_state,
+    now_local_compact_minute,
     normalize_app_key,
     now_local_iso,
     read_json,
@@ -305,9 +306,11 @@ def main() -> int:
     raw_app = scenario_payload.get("app")
     app_key, app_info = normalize_app_key(config, raw_app)
     scenario_id = args.scenario_id or infer_scenario_id(input_path, int(config["git"].get("scenario_id_padding", 3)))
+    scenario_timestamp = now_local_compact_minute()
     scenario_branch = config["git"]["scenario_branch_format"].format(
         app_segment=app_info["app_segment"],
         scenario_id=scenario_id,
+        timestamp=scenario_timestamp,
     )
     scenario_key = sanitize_name(f"{app_key}-{scenario_id}")
 

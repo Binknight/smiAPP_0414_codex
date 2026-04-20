@@ -71,7 +71,7 @@ python dev/scripts/run_pipeline.py --input scenario1.json --no-web
 重点配置项：
 
 - `git.app_types`：APP 类型与基础分支映射
-- `git.scenario_branch_format`：场景分支命名模板
+- `git.scenario_branch_format`：场景分支命名模板，支持 `{app_segment}`、`{scenario_id}`、`{timestamp}`
 - `agent.active`：当前启用的 Agent
 - `agent.definitions`：各 Agent 的启动命令模板
 - `paths`：输入、日志、状态、输出、mock 数据目录

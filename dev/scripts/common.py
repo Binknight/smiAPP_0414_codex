@@ -22,6 +22,10 @@ def now_local_iso() -> str:
     return datetime.now().astimezone().isoformat(timespec="seconds")
 
 
+def now_local_compact_minute() -> str:
+    return datetime.now().astimezone().strftime("%Y%m%d%H%M")
+
+
 def utc_now_compact() -> str:
     return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 
