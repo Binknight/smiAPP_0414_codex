@@ -86,6 +86,7 @@
       "entry",
       "hvigor",
       "dev/spec",
+      "dev/mock-data",
       "README.md",
       "build.ps1",
       "build.bat",
