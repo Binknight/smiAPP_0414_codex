@@ -291,46 +291,110 @@ p {
   padding: 0;
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 8px;
+  gap: 6px;
+  align-items: start;
 }
 
 .progress-step {
-  min-height: 70px;
-  padding: 10px 8px 8px;
-  border: 1px solid var(--panel-border);
-  background: linear-gradient(180deg, #ffffff, #edf2f7);
+  position: relative;
+  min-height: 46px;
+  padding: 0;
+  border: 0;
+  background: transparent;
   color: var(--muted);
 }
 
+.progress-step::before {
+  content: "";
+  position: absolute;
+  top: 7px;
+  left: calc(50% + 10px);
+  width: calc(100% - 20px);
+  height: 1px;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(85, 105, 125, 0.55) 0 8px,
+      transparent 8px 14px
+    );
+  opacity: 0.9;
+}
+
+.progress-step:last-child::before {
+  display: none;
+}
+
 .progress-step.done {
-  border-color: rgba(24, 121, 78, 0.55);
-  background: linear-gradient(180deg, rgba(24, 121, 78, 0.14), rgba(24, 121, 78, 0.06));
   color: var(--success);
 }
 
 .progress-step.active {
-  border-color: rgba(15, 78, 201, 0.62);
-  background: linear-gradient(180deg, rgba(15, 78, 201, 0.16), rgba(13, 138, 114, 0.08));
   color: var(--text);
 }
 
-.step-index {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  margin-bottom: 8px;
-  border: 1px solid currentColor;
-  font-weight: 700;
-  font-size: 12px;
+.progress-step.done::before {
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(24, 121, 78, 0.75) 0 8px,
+      transparent 8px 14px
+    );
+}
+
+.progress-step.active::before {
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(15, 78, 201, 0.9) 0 8px,
+      transparent 8px 14px
+    );
+}
+
+.step-node {
+  display: block;
+  width: 14px;
+  height: 14px;
+  margin: 0 auto 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(85, 105, 125, 0.85);
+  background:
+    radial-gradient(circle at 50% 50%, rgba(85, 105, 125, 0.3) 0 32%, transparent 36% 100%),
+    #f4f7fb;
+  box-shadow:
+    0 0 0 4px rgba(85, 105, 125, 0.08),
+    0 0 18px rgba(85, 105, 125, 0.08);
+}
+
+.progress-step.done .step-node {
+  border-color: rgba(24, 121, 78, 0.95);
+  background:
+    radial-gradient(circle at 50% 50%, rgba(24, 121, 78, 0.85) 0 36%, transparent 40% 100%),
+    #f4f7fb;
+  box-shadow:
+    0 0 0 4px rgba(24, 121, 78, 0.12),
+    0 0 22px rgba(24, 121, 78, 0.22);
+}
+
+.progress-step.active .step-node {
+  border-color: rgba(15, 78, 201, 0.95);
+  background:
+    radial-gradient(circle at 50% 50%, rgba(15, 78, 201, 0.95) 0 38%, transparent 42% 100%),
+    #f4f7fb;
+  box-shadow:
+    0 0 0 5px rgba(15, 78, 201, 0.12),
+    0 0 24px rgba(15, 78, 201, 0.28);
 }
 
 .step-text {
   display: block;
+  max-width: 84px;
+  margin: 0 auto;
   font-weight: 700;
   line-height: 1.3;
-  font-size: 12px;
+  font-size: 11px;
+  text-align: center;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
 }
 
 .logs-grid {

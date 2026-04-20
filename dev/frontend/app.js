@@ -78,7 +78,7 @@ function renderTask(task) {
     li.className = "progress-step";
     if (index + 1 < task.progress.currentStep) li.classList.add("done");
     if (index + 1 === task.progress.currentStep) li.classList.add("active");
-    li.innerHTML = `<span class="step-index">${index + 1}</span><span class="step-text">${step}</span>`;
+    li.innerHTML = `<span class="step-node" aria-hidden="true"></span><span class="step-text">${step}</span>`;
     els.steps.appendChild(li);
   });
 
