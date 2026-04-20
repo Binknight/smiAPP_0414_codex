@@ -16,3 +16,4 @@ node_modules
 *.cer
 __pycache__/
 *.pyc
+.codex-ssh

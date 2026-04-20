@@ -106,12 +106,12 @@ spec 必须满足：
 
 默认输出目录：
 
-- 仓库根目录下的 `specs/`
+- 仓库根目录下的 `dev/spec/`
 
 默认命名规则：
 
-- 如果输入文件是 `scenario1.json`，则输出为 `specs/scenario1.spec.md`
-- 如果输入文件是 `foo/bar/case-a.json`，则输出为 `specs/case-a.spec.md`
+- 如果输入文件是 `scenario1.json`，则输出为 `dev/spec/scenario1.spec.md`
+- 如果输入文件是 `foo/bar/case-a.json`，则输出为 `dev/spec/case-a.spec.md`
 - 如果一次生成多个场景，则为每个场景分别生成独立 `.spec.md` 文件
 
 默认行为：
