@@ -11,6 +11,37 @@ $ErrorActionPreference = 'Stop'
 
 $projectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 
+function Invoke-MockDataGenerator {
+    param(
+        [string]$ProjectRoot
+    )
+
+    $scriptPath = Join-Path $ProjectRoot 'dev\scripts\generate_mock_arkts.py'
+    if (-not (Test-Path -LiteralPath $scriptPath)) {
+        throw "Mock data generator not found: $scriptPath"
+    }
+
+    Write-Host "Generating ArkTS mock data from dev/mock-data/generic-001 ..."
+
+    $pythonCommand = Get-Command py -ErrorAction SilentlyContinue
+    if ($null -ne $pythonCommand) {
+        & $pythonCommand.Source -3 $scriptPath
+        if ($LASTEXITCODE -eq 0) {
+            return
+        }
+    }
+
+    $pythonCommand = Get-Command python -ErrorAction SilentlyContinue
+    if ($null -eq $pythonCommand) {
+        throw 'Python is required to generate mock data, but neither `py` nor `python` is available.'
+    }
+
+    & $pythonCommand.Source $scriptPath
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Mock data generation failed.'
+    }
+}
+
 function Expand-EnvPath {
     param([string]$Value)
     if ([string]::IsNullOrWhiteSpace($Value)) {
@@ -267,6 +298,7 @@ Assert-PathExists -Path $hmsTarget -Message "hms SDK not found: $hmsTarget"
 $sdkPkgJson = Build-SdkPkgJson -SdkPkg $config.SdkPkg
 Ensure-CompatSdk -CompatSdkRoot $compatSdkRoot -OpenharmonyTarget $openharmonyTarget -HmsTarget $hmsTarget -SdkPkgJson $sdkPkgJson
 Ensure-HvigorPackages -ProjectRoot $projectRoot -DevEcoRoot $devecoRoot
+Invoke-MockDataGenerator -ProjectRoot $projectRoot
 
 $env:DEVECO_SDK_HOME = $compatSdkRoot
 $env:PATH = "$jbrBin;$env:PATH"

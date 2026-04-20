@@ -2,15 +2,15 @@
   "string": [
     {
       "name": "app_name",
-      "value": "ArkUI Demo"
+      "value": "Travel Ticket Demo"
     },
     {
       "name": "module_desc",
-      "value": "A simple HarmonyOS ArkUI sample app."
+      "value": "A mock-driven travel ticket homepage scenario for HarmonyOS."
     },
     {
       "name": "entry_desc",
-      "value": "Main entry ability."
+      "value": "Travel ticket home entry ability."
     }
   ]
 }

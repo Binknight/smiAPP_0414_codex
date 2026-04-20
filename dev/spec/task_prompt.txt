@@ -1,0 +1,47 @@
+任务内容：
+
+你当前所在仓库已经切换到目标 APP 场景分支，请直接在当前工作区内完成以下任务，不要只输出分析结论，必须落盘实现并完成构建验证。
+
+场景基础信息：
+- 场景输入 JSON 路径：C:\Users\ttelab\commApp\scenario1.json
+- 场景输入 JSON 内容：
+```json
+{
+  "question": "旅游APP购票场景，猫眼首页未切换地址为当前位置",
+  "exception": "",
+  "exception_type": "",
+  "exception_reason": "",
+  "app": "general",
+  "flow": "",
+  "flow_reason": ""
+}
+```
+- APP 类型：generic
+- APP 类型说明：通用类APP
+- 基础分支：main
+- 当前开发分支：prod-generic-app-scenario-001-202604200547
+- mock 数据目录：C:\Users\ttelab\commApp\simApp-main\smiAPP_0414_codex\dev\mock-data\generic-001
+- 结果 JSON 输出路径：C:\Users\ttelab\commApp\simApp-main\smiAPP_0414_codex\dev\output\generic-001.result.json
+- 构建命令：`powershell -ExecutionPolicy Bypass -File .\build.ps1`
+
+任务要求：
+
+1. 调用 `skills/simapp-scenario-spec-gen` skill 生成 APP 开发 spec，并将 spec 文件保存到仓库内 `dev/spec` 目录下。
+2. 基于 app spec 制定仿真 APP 开发计划，并按计划直接实施开发。
+3. 所有相关数据源采用 mock 方式，拆分为各自独立的 JSON 文件，并统一放在 `C:\Users\ttelab\commApp\simApp-main\smiAPP_0414_codex\dev\mock-data\generic-001` 目录下，便于后期维护。
+4. 开发任务完成后，严格按照 `README.md` 的编译构建指导执行出包；过程中遇到的错误必须继续排查并修复，直到编译构建成功才算完成。
+5. 如果出包成功，请将结果 JSON 写入 `C:\Users\ttelab\commApp\simApp-main\smiAPP_0414_codex\dev\output\generic-001.result.json`，至少包含以下字段：
+   - `buildStatus`
+   - `artifactPath`
+   - `artifactSizeBytes`
+   - `buildTime`
+   - `scenarioBranch`
+   - `appType`
+6. 如果构建失败，也必须输出结果 JSON，写明失败状态、失败时间、错误摘要和最后一次可用日志路径，便于自动巡检和恢复。
+
+执行约束：
+
+- 优先做增量修改，避免无关重构。
+- 不要跳过构建验证。
+- 不要把 mock 数据内联在代码里，必须落成独立 JSON 文件。
+- 关键过程请输出清晰日志，便于命令行追踪。

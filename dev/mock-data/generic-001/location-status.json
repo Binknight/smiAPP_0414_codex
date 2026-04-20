@@ -1,0 +1,12 @@
+{
+  "pageTitle": "猫眼门票",
+  "pageSubtitle": "旅游购票首页",
+  "defaultCity": "上海",
+  "detectedCity": "杭州",
+  "detectedDistrict": "西湖区",
+  "locationLabel": "当前位置",
+  "syncState": "mismatch",
+  "message": "系统已识别到当前位置在杭州，但首页门票内容仍展示上海。",
+  "lastUpdated": "2分钟前",
+  "switchActionLabel": "切换到当前位置"
+}

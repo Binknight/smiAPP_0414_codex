@@ -1,0 +1,19 @@
+{
+  "options": [
+    {
+      "code": "shanghai",
+      "label": "上海",
+      "tag": "当前首页"
+    },
+    {
+      "code": "hangzhou",
+      "label": "杭州",
+      "tag": "当前位置"
+    },
+    {
+      "code": "suzhou",
+      "label": "苏州",
+      "tag": "周边热门"
+    }
+  ]
+}
