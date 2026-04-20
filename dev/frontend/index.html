@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pipeline Console</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <div>
+          <p class="eyebrow">Current Pipeline</p>
+          <h1 id="task-title">加载中</h1>
+          <p class="hero-meta" id="task-branch">-</p>
+        </div>
+        <div class="status-pill" id="status-pill">-</div>
+      </section>
+
+      <section class="grid">
+        <article class="card">
+          <h2>任务信息</h2>
+          <div class="info-list">
+            <div><span>场景 ID</span><strong id="scenario-id">-</strong></div>
+            <div><span>APP 类型</span><strong id="app-type">-</strong></div>
+            <div><span>Agent PID</span><strong id="agent-pid">-</strong></div>
+            <div><span>开始时间</span><strong id="started-at">-</strong></div>
+            <div><span>最后更新</span><strong id="updated-at">-</strong></div>
+            <div><span>结果文件</span><strong id="result-json">-</strong></div>
+          </div>
+        </article>
+
+        <article class="card">
+          <h2>进度</h2>
+          <div class="progress-head">
+            <strong id="progress-label">-</strong>
+            <span id="progress-percent">0%</span>
+          </div>
+          <div class="progress-track"><div id="progress-bar"></div></div>
+          <ol class="steps" id="steps"></ol>
+        </article>
+      </section>
+
+      <section class="grid">
+        <article class="card">
+          <h2>巡检状态</h2>
+          <div class="info-list">
+            <div><span>状态</span><strong id="inspection-status">-</strong></div>
+            <div><span>巡检轮次</span><strong id="inspection-cycles">-</strong></div>
+            <div><span>最近检查</span><strong id="inspection-last">-</strong></div>
+            <div><span>说明</span><strong id="inspection-message">-</strong></div>
+          </div>
+        </article>
+
+        <article class="card danger">
+          <h2>任务控制</h2>
+          <p>点击后会终止当前 Agent 进程，并将任务状态标记为已取消。</p>
+          <div class="button-row">
+            <button id="terminate-button" type="button">终止任务</button>
+            <button id="shutdown-console-button" class="secondary-button" type="button">关闭控制台</button>
+          </div>
+          <p class="action-hint" id="terminate-hint"></p>
+        </article>
+      </section>
+
+      <section class="grid logs">
+        <article class="card">
+          <h2>Pipeline Log</h2>
+          <pre id="pipeline-log">加载中...</pre>
+        </article>
+        <article class="card">
+          <h2>Agent Log</h2>
+          <pre id="agent-log">加载中...</pre>
+        </article>
+      </section>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+  </html>
