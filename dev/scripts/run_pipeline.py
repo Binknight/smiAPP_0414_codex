@@ -4,6 +4,7 @@ import argparse
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +18,7 @@ from common import (
     infer_scenario_id,
     is_process_running,
     load_runtime_state,
+    now_local_compact_minute,
     normalize_app_key,
     now_local_iso,
     read_json,
@@ -28,8 +30,9 @@ from common import (
     setup_logger,
     update_runtime_state,
     utc_now_compact,
-    write_json,
+    windows_subprocess_kwargs,
 )
+from pipeline_monitor_lib import initialize_inspection
 
 
 def parse_args() -> argparse.Namespace:
@@ -41,6 +44,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--resume", action="store_true", help="存在运行状态时尝试恢复")
     parser.add_argument("--force-retry", action="store_true", help="忽略已有失败状态，重新下发 Agent")
     parser.add_argument("--dry-run", action="store_true", help="仅打印计划，不实际执行 git 和 agent 命令")
+    parser.add_argument("--no-web", action="store_true", help="不自动启动 Web 控制台")
     return parser.parse_args()
 
 
@@ -54,6 +58,12 @@ def prepare_logger(repo_root: Path, config: dict[str, Any], scenario_name: str) 
     log_file = logs_root / f"pipeline-{sanitize_name(scenario_name)}-{utc_now_compact()}.log"
     logger = setup_logger("dev-pipeline", log_file)
     return logger, log_file
+
+
+def update_state_status(state: dict[str, Any], status: str) -> dict[str, Any]:
+    state["status"] = status
+    state["updated_at"] = now_local_iso()
+    return state
 
 
 def build_runtime_paths(repo_root: Path, config: dict[str, Any], scenario_key: str) -> dict[str, Path]:
@@ -121,6 +131,7 @@ def ensure_scenario_branch(
         encoding="utf-8",
         errors="replace",
         check=False,
+        **windows_subprocess_kwargs(),
     )
     if exists.returncode == 0:
         logger.info("场景分支已存在，直接切换: %s", scenario_branch)
@@ -231,6 +242,54 @@ def dispatch_agent(
     return state
 
 
+def start_web_console(
+    repo_root: Path,
+    config_path: Path,
+    state_file: Path,
+    logger: Any,
+    dry_run: bool,
+) -> dict[str, Any] | None:
+    command = [
+        sys.executable,
+        str((repo_root / "dev" / "scripts" / "web_console.py").resolve()),
+        "--config",
+        str(config_path),
+        "--state-file",
+        str(state_file),
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "8765",
+    ]
+    if dry_run:
+        command.append("--dry-run")
+
+    creationflags = 0
+    if os.name == "nt":
+        creationflags = subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS
+    subprocess.Popen(
+        command,
+        cwd=str(repo_root),
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        creationflags=creationflags,
+        close_fds=True,
+    )
+
+    for _ in range(25):
+        state = load_runtime_state(state_file)
+        web = (state or {}).get("web")
+        if web and web.get("url"):
+            logger.info("Web 控制台已就绪: %s", web["url"])
+            return web
+        time.sleep(0.2)
+    logger.warning("Web 控制台启动中，但尚未回写 URL。")
+    return None
+
+
 def main() -> int:
     configure_stdio()
     args = parse_args()
@@ -247,9 +306,11 @@ def main() -> int:
     raw_app = scenario_payload.get("app")
     app_key, app_info = normalize_app_key(config, raw_app)
     scenario_id = args.scenario_id or infer_scenario_id(input_path, int(config["git"].get("scenario_id_padding", 3)))
+    scenario_timestamp = now_local_compact_minute()
     scenario_branch = config["git"]["scenario_branch_format"].format(
         app_segment=app_info["app_segment"],
         scenario_id=scenario_id,
+        timestamp=scenario_timestamp,
     )
     scenario_key = sanitize_name(f"{app_key}-{scenario_id}")
 
@@ -267,15 +328,16 @@ def main() -> int:
         pid = existing_state.get("agent", {}).get("pid")
         if is_process_running(pid):
             logger.info("检测到已有运行中的 Agent 任务，PID=%s。", pid)
+            web = (existing_state.get("web") or {}).get("url")
+            if web:
+                logger.info("已有 Web 控制台: %s", web)
             if args.resume or args.wait:
                 logger.info("复用已有运行状态，不重复下发。")
-                if args.wait:
-                    logger.info("当前仅保留状态，建议配合 monitor_results.py 进行巡检。")
                 return 0
             logger.info("如需重试请使用 --force-retry。")
             return 0
 
-        if existing_state.get("status") == "completed":
+        if existing_state.get("status") in {"completed", "pushed"}:
             logger.info("该场景已完成，结果文件: %s", existing_state.get("result_json"))
             return 0
 
@@ -300,40 +362,50 @@ def main() -> int:
     task_prompt_path = write_task_prompt_snapshot(repo_root, task_prompt)
     logger.info("已输出任务 Prompt 快照: %s", task_prompt_path)
 
-    state = {
-        "scenario_id": scenario_id,
-        "scenario_key": scenario_key,
-        "scenario_input": str(input_path),
-        "app_type": app_key,
-        "app_display_name": app_info.get("display_name", app_key),
-        "base_branch": base_branch,
-        "scenario_branch": scenario_branch,
-        "status": "initialized",
-        "created_at": now_local_iso(),
-        "updated_at": now_local_iso(),
-        "log_file": str(log_file),
-        "mock_data_dir": str(runtime_paths["mock_dir"]),
-        "result_json": str(runtime_paths["result_json"]),
-        "agent": {
-            "type": config["agent"]["active"],
-            "log_path": str(resolve_path(repo_root, config["paths"]["logs_root"]) / f"agent-{scenario_key}-{utc_now_compact()}.log"),
-            "command": [],
-            "pid": None,
-            "started_at": None,
-        },
-    }
+    state = initialize_inspection(
+        {
+            "scenario_id": scenario_id,
+            "scenario_key": scenario_key,
+            "scenario_input": str(input_path),
+            "app_type": app_key,
+            "app_display_name": app_info.get("display_name", app_key),
+            "base_branch": base_branch,
+            "scenario_branch": scenario_branch,
+            "status": "initialized",
+            "created_at": now_local_iso(),
+            "updated_at": now_local_iso(),
+            "log_file": str(log_file),
+            "mock_data_dir": str(runtime_paths["mock_dir"]),
+            "result_json": str(runtime_paths["result_json"]),
+            "web": {},
+            "agent": {
+                "type": config["agent"]["active"],
+                "log_path": str(resolve_path(repo_root, config["paths"]["logs_root"]) / f"agent-{scenario_key}-{utc_now_compact()}.log"),
+                "command": [],
+                "pid": None,
+                "started_at": None,
+            },
+        }
+    )
     update_runtime_state(state_file, state, logger)
 
     logger.info("准备进行 Git 基础分支同步。")
+    state = update_state_status(state, "git_preparing")
+    update_runtime_state(state_file, state, logger)
     ensure_base_branch(repo_root, config, base_branch, logger, args.dry_run)
     logger.info("准备创建/切换场景分支。")
     ensure_scenario_branch(repo_root, scenario_branch, logger, args.dry_run)
+    state = update_state_status(state, "git_ready")
+    update_runtime_state(state_file, state, logger)
 
     agent_definition = config["agent"]["definitions"][config["agent"]["active"]]
     agent_command, extra_env = instantiate_agent_command(agent_definition, task_prompt)
     state = dispatch_agent(repo_root, state, agent_command, task_prompt, extra_env, logger, args.dry_run)
     state["updated_at"] = now_local_iso()
     update_runtime_state(state_file, state, logger)
+
+    if not args.no_web:
+        start_web_console(repo_root, config_path, state_file, logger, args.dry_run)
 
     if args.wait and not args.dry_run:
         pid = state["agent"]["pid"]
@@ -343,6 +415,7 @@ def main() -> int:
                 ["powershell", "-Command", f"Wait-Process -Id {pid}"],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
+                **windows_subprocess_kwargs(),
             )
             process.wait()
         except KeyboardInterrupt:
@@ -358,7 +431,7 @@ def main() -> int:
         state["updated_at"] = now_local_iso()
         update_runtime_state(state_file, state, logger)
 
-    logger.info("自动化下发完成。后续可执行 monitor_results.py 进行结果巡检与推送。")
+    logger.info("自动化下发完成。Web 控制台会继续展示当前任务和巡检状态。")
     return 0
 
 

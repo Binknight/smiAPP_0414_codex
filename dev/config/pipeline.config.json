@@ -12,7 +12,7 @@
     "remote_name": "origin",
     "remote_url": "https://github.com/Binknight/smiAPP_0414_codex.git",
     "default_base_branch": "main",
-    "scenario_branch_format": "prod-{app_segment}-app-scenario-{scenario_id}",
+    "scenario_branch_format": "prod-{app_segment}-app-scenario-{scenario_id}-{timestamp}",
     "scenario_id_padding": 3,
     "fetch_all_known_branches": true,
     "app_types": {

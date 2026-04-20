@@ -22,6 +22,10 @@ def now_local_iso() -> str:
     return datetime.now().astimezone().isoformat(timespec="seconds")
 
 
+def now_local_compact_minute() -> str:
+    return datetime.now().astimezone().strftime("%Y%m%d%H%M")
+
+
 def utc_now_compact() -> str:
     return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 
@@ -78,6 +82,25 @@ def setup_logger(name: str, log_file: Path) -> logging.Logger:
     return logger
 
 
+def setup_stream_logger(name: str, stream: Any = None) -> logging.Logger:
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.INFO)
+    logger.handlers.clear()
+    logger.propagate = False
+
+    formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
+    stream_handler = logging.StreamHandler(stream or sys.stdout)
+    stream_handler.setFormatter(formatter)
+    logger.addHandler(stream_handler)
+    return logger
+
+
+def windows_subprocess_kwargs() -> dict[str, Any]:
+    if os.name != "nt":
+        return {}
+    return {"creationflags": subprocess.CREATE_NO_WINDOW}
+
+
 def run_command(
     cmd: list[str],
     cwd: Path,
@@ -93,6 +116,7 @@ def run_command(
         encoding="utf-8",
         errors="replace",
         check=False,
+        **windows_subprocess_kwargs(),
     )
     if result.stdout.strip():
         logger.info("标准输出:\n%s", result.stdout.rstrip())
@@ -157,6 +181,7 @@ def is_process_running(pid: int | None) -> bool:
         encoding="utf-8",
         errors="replace",
         check=False,
+        **windows_subprocess_kwargs(),
     )
     return str(pid) in result.stdout
 
@@ -170,6 +195,7 @@ def git_has_local_changes(repo_root: Path) -> bool:
         encoding="utf-8",
         errors="replace",
         check=False,
+        **windows_subprocess_kwargs(),
     )
     return bool(result.stdout.strip())
 
@@ -185,6 +211,7 @@ def ensure_remote(repo_root: Path, git_config: dict[str, Any], logger: logging.L
         encoding="utf-8",
         errors="replace",
         check=False,
+        **windows_subprocess_kwargs(),
     )
     if result.returncode != 0:
         logger.info("检测到远端 %s 不存在，开始自动添加。", remote_name)
