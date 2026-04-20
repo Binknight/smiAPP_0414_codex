@@ -11,7 +11,7 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import urlparse
 
 from common import (
     configure_stdio,
@@ -55,11 +55,10 @@ def find_available_port(host: str, starting_port: int, attempts: int = 20) -> in
     raise RuntimeError(f"无法找到可用端口，起始端口={starting_port}")
 
 
-def read_log_tail(path: Path, lines: int) -> str:
+def read_log_content(path: Path) -> str:
     if not path.exists():
         return ""
-    content = path.read_text(encoding="utf-8", errors="replace").splitlines()
-    return "\n".join(content[-lines:])
+    return path.read_text(encoding="utf-8", errors="replace")
 
 
 def terminate_pid(pid: int) -> bool:
@@ -79,34 +78,26 @@ def compute_progress(state: dict[str, Any]) -> dict[str, Any]:
     inspection = state.get("inspection") or {}
     result_exists = Path(state["result_json"]).exists()
     current = 1
-    label = "初始化"
+    label = "任务初始化"
     status = state.get("status")
+
     if status in {"git_preparing", "git_ready"}:
         current = 2
-        label = "Git 准备"
+        label = "仿真基线准备"
     elif status in {"agent_running"}:
         current = 3
-        label = "Agent 运行中"
+        label = "Agent 运行时"
     elif status in {"inspection_running"} or inspection.get("status") == "running":
         current = 4
-        label = "巡检中"
+        label = "状态巡检"
     elif result_exists:
         current = 5
-        label = "已产出结果"
-    if status == "dry_run":
+        label = "结果输出"
+
+    if status in {"dry_run", "pushed", "completed", "build_failed", "agent_exited_without_result", "cancelled", "dry_run_success_detected"}:
         current = 6
-        label = "dry-run 完成"
-    if status in {"pushed", "completed", "build_failed", "agent_exited_without_result", "cancelled", "dry_run_success_detected"}:
-        current = 6
-        label = {
-            "pushed": "已推送",
-            "completed": "已完成",
-            "build_failed": "构建失败",
-            "agent_exited_without_result": "异常结束",
-            "cancelled": "已取消",
-            "dry_run": "dry-run 完成",
-            "dry_run_success_detected": "dry-run 完成",
-        }.get(status, "已完成")
+        label = "完成"
+
     total = 6
     return {
         "currentStep": current,
@@ -114,14 +105,45 @@ def compute_progress(state: dict[str, Any]) -> dict[str, Any]:
         "percent": int(current / total * 100),
         "label": label,
         "steps": [
-            "初始化",
-            "Git 准备",
-            "Agent 运行中",
-            "巡检中",
-            "已产出结果",
+            "任务初始化",
+            "仿真基线准备",
+            "Agent 运行时",
+            "状态巡检",
+            "结果输出",
             "完成",
         ],
     }
+
+
+def infer_scenario_question(state: dict[str, Any]) -> str | None:
+    question = state.get("scenario_question")
+    if question:
+        return str(question)
+    scenario_input = state.get("scenario_input")
+    if not scenario_input:
+        return None
+    input_path = Path(str(scenario_input))
+    if not input_path.exists():
+        return None
+    try:
+        payload = read_json(input_path)
+    except Exception:
+        return None
+    return payload.get("question") or payload.get("prompt")
+
+
+def build_agent_runtime_payload(state: dict[str, Any]) -> dict[str, Any]:
+    runtime = dict(state.get("agent", {}).get("runtime") or {})
+    runtime.setdefault("workspace", str(Path(__file__).resolve().parents[2]))
+    runtime.setdefault("name", "codex cli")
+    runtime.setdefault("model", os.environ.get("CODEX_MODEL", "gpt-5.4"))
+    runtime.setdefault("provider", os.environ.get("CODEX_PROVIDER", "openai"))
+    runtime.setdefault("approval_policy", os.environ.get("CODEX_APPROVAL_POLICY", "never"))
+    runtime.setdefault("sandbox_mode", os.environ.get("CODEX_SANDBOX_MODE", "danger-full-access"))
+    runtime.setdefault("reasoning_effort", os.environ.get("CODEX_REASONING_EFFORT", "medium"))
+    runtime.setdefault("reasoning_summary", os.environ.get("CODEX_REASONING_SUMMARY", "none"))
+    runtime.setdefault("session_id", os.environ.get("CODEX_SESSION_ID") or os.environ.get("OPENAI_SESSION_ID"))
+    return runtime
 
 
 def build_task_payload(state_file: Path) -> dict[str, Any]:
@@ -137,6 +159,7 @@ def build_task_payload(state_file: Path) -> dict[str, Any]:
         "scenarioId": state.get("scenario_id"),
         "scenarioKey": state.get("scenario_key"),
         "scenarioInput": state.get("scenario_input"),
+        "scenarioQuestion": infer_scenario_question(state),
         "appType": state.get("app_type"),
         "appDisplayName": state.get("app_display_name"),
         "baseBranch": state.get("base_branch"),
@@ -155,6 +178,7 @@ def build_task_payload(state_file: Path) -> dict[str, Any]:
             "running": is_process_running(state.get("agent", {}).get("pid")),
             "logPath": state.get("agent", {}).get("log_path"),
             "command": state.get("agent", {}).get("command"),
+            "runtime": build_agent_runtime_payload(state),
         },
         "inspection": {
             "status": inspection.get("status"),
@@ -215,12 +239,10 @@ class ConsoleHandler(BaseHTTPRequestHandler):
             self._send_json(task.get("progress") or {})
             return
         if parsed.path == "/api/task/current/logs":
-            query = parse_qs(parsed.query)
-            tail = int(query.get("tail", ["80"])[0])
             state = load_runtime_state(self.server.state_file) or {}
             payload = {
-                "pipelineLog": read_log_tail(Path(state.get("log_file", "")), tail),
-                "agentLog": read_log_tail(Path(state.get("agent", {}).get("log_path", "")), tail),
+                "pipelineLog": read_log_content(Path(state.get("log_file", ""))),
+                "agentLog": read_log_content(Path(state.get("agent", {}).get("log_path", ""))),
             }
             self._send_json(payload)
             return
@@ -268,7 +290,6 @@ class ConsoleHandler(BaseHTTPRequestHandler):
             return
 
         self.send_error(HTTPStatus.NOT_FOUND)
-        return
 
     def log_message(self, format: str, *args: Any) -> None:
         self.server.logger.info("web %s - %s", self.address_string(), format % args)

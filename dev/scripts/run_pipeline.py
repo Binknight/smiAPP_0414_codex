@@ -177,6 +177,25 @@ def summarize_agent_command(command: list[str]) -> str:
     return format_command(command)
 
 
+def build_agent_runtime_info(
+    repo_root: Path,
+    config: dict[str, Any],
+) -> dict[str, Any]:
+    agent_key = config["agent"]["active"]
+    agent_definition = config["agent"]["definitions"].get(agent_key, {})
+    return {
+        "workspace": str(repo_root),
+        "name": str(agent_definition.get("display_name", agent_key)).replace("_", " ").lower(),
+        "model": os.environ.get("CODEX_MODEL", "gpt-5.4"),
+        "provider": os.environ.get("CODEX_PROVIDER", "openai"),
+        "approval_policy": os.environ.get("CODEX_APPROVAL_POLICY", "never"),
+        "sandbox_mode": os.environ.get("CODEX_SANDBOX_MODE", "danger-full-access"),
+        "reasoning_effort": os.environ.get("CODEX_REASONING_EFFORT", "medium"),
+        "reasoning_summary": os.environ.get("CODEX_REASONING_SUMMARY", "none"),
+        "session_id": os.environ.get("CODEX_SESSION_ID") or os.environ.get("OPENAI_SESSION_ID"),
+    }
+
+
 def instantiate_agent_command(
     agent_definition: dict[str, Any],
     task_prompt: str,
@@ -361,12 +380,14 @@ def main() -> int:
     task_prompt = render_template(template_text, prompt_variables)
     task_prompt_path = write_task_prompt_snapshot(repo_root, task_prompt)
     logger.info("已输出任务 Prompt 快照: %s", task_prompt_path)
+    scenario_question = str(scenario_payload.get("question") or scenario_payload.get("prompt") or "").strip()
 
     state = initialize_inspection(
         {
             "scenario_id": scenario_id,
             "scenario_key": scenario_key,
             "scenario_input": str(input_path),
+            "scenario_question": scenario_question,
             "app_type": app_key,
             "app_display_name": app_info.get("display_name", app_key),
             "base_branch": base_branch,
@@ -380,6 +401,7 @@ def main() -> int:
             "web": {},
             "agent": {
                 "type": config["agent"]["active"],
+                "runtime": build_agent_runtime_info(repo_root, config),
                 "log_path": str(resolve_path(repo_root, config["paths"]["logs_root"]) / f"agent-{scenario_key}-{utc_now_compact()}.log"),
                 "command": [],
                 "pid": None,

@@ -1,9 +1,10 @@
 const els = {
   title: document.getElementById("task-title"),
-  branch: document.getElementById("task-branch"),
   statusPill: document.getElementById("status-pill"),
   scenarioId: document.getElementById("scenario-id"),
+  scenarioQuestion: document.getElementById("scenario-question"),
   appType: document.getElementById("app-type"),
+  baseBranch: document.getElementById("base-branch"),
   agentPid: document.getElementById("agent-pid"),
   startedAt: document.getElementById("started-at"),
   updatedAt: document.getElementById("updated-at"),
@@ -21,6 +22,16 @@ const els = {
   terminateButton: document.getElementById("terminate-button"),
   shutdownConsoleButton: document.getElementById("shutdown-console-button"),
   terminateHint: document.getElementById("terminate-hint"),
+  agentRunningState: document.getElementById("agent-running-state"),
+  agentWorkspace: document.getElementById("agent-workspace"),
+  agentName: document.getElementById("agent-name"),
+  agentModel: document.getElementById("agent-model"),
+  agentProvider: document.getElementById("agent-provider"),
+  agentApproval: document.getElementById("agent-approval"),
+  agentSandbox: document.getElementById("agent-sandbox"),
+  agentReasoningEffort: document.getElementById("agent-reasoning-effort"),
+  agentReasoningSummary: document.getElementById("agent-reasoning-summary"),
+  agentSessionId: document.getElementById("agent-session-id"),
 };
 
 function fmt(value) {
@@ -35,28 +46,42 @@ function classifyStatus(status) {
 }
 
 function renderTask(task) {
-  els.title.textContent = task.scenarioKey || "当前任务";
-  els.branch.textContent = task.scenarioBranch || "-";
+  const runtime = task.agent.runtime || {};
+  els.title.textContent = task.scenarioBranch || task.scenarioKey || "当前任务";
   els.statusPill.textContent = fmt(task.status);
   els.statusPill.className = `status-pill ${classifyStatus(task.status)}`;
   els.scenarioId.textContent = fmt(task.scenarioId);
+  els.scenarioQuestion.textContent = fmt(task.scenarioQuestion);
   els.appType.textContent = fmt(task.appDisplayName || task.appType);
+  els.baseBranch.textContent = fmt(task.baseBranch);
   els.agentPid.textContent = fmt(task.agent.pid);
   els.startedAt.textContent = fmt(task.agent.startedAt);
   els.updatedAt.textContent = fmt(task.updatedAt);
   els.resultJson.textContent = fmt(task.resultJson);
+  els.agentRunningState.textContent = task.agent.running ? "运行中" : "未运行";
+  els.agentWorkspace.textContent = fmt(runtime.workspace);
+  els.agentName.textContent = fmt(runtime.name || task.agent.type);
+  els.agentModel.textContent = fmt(runtime.model);
+  els.agentProvider.textContent = fmt(runtime.provider);
+  els.agentApproval.textContent = fmt(runtime.approval_policy);
+  els.agentSandbox.textContent = fmt(runtime.sandbox_mode);
+  els.agentReasoningEffort.textContent = fmt(runtime.reasoning_effort);
+  els.agentReasoningSummary.textContent = fmt(runtime.reasoning_summary);
+  els.agentSessionId.textContent = fmt(runtime.session_id);
   els.progressLabel.textContent = fmt(task.progress.label);
   els.progressPercent.textContent = `${task.progress.percent || 0}%`;
   els.progressBar.style.width = `${task.progress.percent || 0}%`;
   els.steps.innerHTML = "";
+
   (task.progress.steps || []).forEach((step, index) => {
     const li = document.createElement("li");
-    li.textContent = step;
-    if (index + 1 === task.progress.currentStep) {
-      li.classList.add("active");
-    }
+    li.className = "progress-step";
+    if (index + 1 < task.progress.currentStep) li.classList.add("done");
+    if (index + 1 === task.progress.currentStep) li.classList.add("active");
+    li.innerHTML = `<span class="step-index">${index + 1}</span><span class="step-text">${step}</span>`;
     els.steps.appendChild(li);
   });
+
   els.inspectionStatus.textContent = fmt(task.inspection.status);
   els.inspectionCycles.textContent = fmt(task.inspection.cycleCount);
   els.inspectionLast.textContent = fmt(task.inspection.lastCheckedAt);
@@ -70,7 +95,7 @@ function renderTask(task) {
 }
 
 async function refreshLogs() {
-  const res = await fetch("/api/task/current/logs?tail=80", { cache: "no-store" });
+  const res = await fetch("/api/task/current/logs", { cache: "no-store" });
   const logs = await res.json();
   els.pipelineLog.textContent = logs.pipelineLog || "暂无日志";
   els.agentLog.textContent = logs.agentLog || "暂无日志";
@@ -114,7 +139,7 @@ els.shutdownConsoleButton.addEventListener("click", async () => {
     const payload = await res.json();
     els.terminateHint.textContent = payload.ok ? "控制台正在关闭。" : "关闭控制台失败。";
     window.setTimeout(() => {
-      document.body.innerHTML = "<main class=\"shell\"><section class=\"hero\"><div><p class=\"eyebrow\">Console Closed</p><h1>控制台已关闭</h1><p class=\"hero-meta\">请重新执行 run_pipeline 再次启动 Web 页面。</p></div></section></main>";
+      document.body.innerHTML = "<main class=\"shell\"><section class=\"card hero-card\"><div><p class=\"eyebrow\">Console Closed</p><h1>控制台已关闭</h1><p class=\"card-note\">请重新执行 run_pipeline 再次启动 Web 页面。</p></div></section></main>";
     }, 500);
   } catch (error) {
     els.shutdownConsoleButton.disabled = false;
