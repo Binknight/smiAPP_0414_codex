@@ -1,0 +1,13 @@
+{
+  "heroTitle": "Generic Scenario 002",
+  "heroSubtitle": "当前场景输入为“什么都不需要实现”，因此应用保留为一个可构建、可验收的通用说明页。",
+  "statusBadge": "No Feature Work",
+  "statusTitle": "无需新增业务实现",
+  "statusDescription": "本次交付只保留与场景匹配的静态说明内容，避免扩展不存在的流程或交互。",
+  "deliveryTitle": "本次交付内容",
+  "deliveryItems": [
+    "生成场景 spec 并写入 dev/spec",
+    "拆分独立 mock JSON 文件并集中放置到 dev/mock-data/generic-002",
+    "完成 HarmonyOS HAP 构建验证"
+  ]
+}

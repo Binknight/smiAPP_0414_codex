@@ -1,0 +1,17 @@
+{
+  "sectionTitle": "验收要点",
+  "items": [
+    {
+      "title": "页面语义正确",
+      "detail": "首页明确表达当前场景没有新增功能实现。"
+    },
+    {
+      "title": "数据文件独立",
+      "detail": "场景元数据、页面说明和验收项拆分为独立 JSON 文件。"
+    },
+    {
+      "title": "工程可出包",
+      "detail": "按照 README 和 build.ps1 指引完成 HAP 构建验证。"
+    }
+  ]
+}

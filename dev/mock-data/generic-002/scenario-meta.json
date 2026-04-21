@@ -1,0 +1,8 @@
+{
+  "scenarioId": "generic-002",
+  "appType": "generic",
+  "appDomain": "general",
+  "question": "什么都不需要实现",
+  "implementationDecision": "no_feature_work",
+  "summary": "当前场景不要求新增业务功能，仅交付说明页、spec、mock 数据与构建验证。"
+}
