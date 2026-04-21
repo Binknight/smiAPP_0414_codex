@@ -17,6 +17,7 @@ from common import (
     run_command,
     sanitize_name,
     setup_logger,
+    setup_stream_logger,
     update_runtime_state,
 )
 
@@ -34,6 +35,15 @@ def prepare_logger(repo_root: Path, config: dict[str, Any], suffix: str) -> logg
     logs_root = ensure_dir(resolve_path(repo_root, config["paths"]["logs_root"]))
     log_file = logs_root / f"monitor-{sanitize_name(suffix)}.log"
     return setup_logger("dev-monitor", log_file)
+
+
+def get_pipeline_logger(state: dict[str, Any] | None, fallback_name: str) -> logging.Logger:
+    if state:
+        log_file = state.get("log_file")
+        if log_file:
+            logger_key = sanitize_name(str(state.get("scenario_key") or Path(str(log_file)).stem))
+            return setup_logger(f"pipeline-monitor-{logger_key}", Path(str(log_file)))
+    return setup_stream_logger(fallback_name)
 
 
 def collect_state_files(repo_root: Path, config: dict[str, Any], state_arg: str | None) -> list[Path]:
@@ -64,12 +74,12 @@ def commit_and_push(
     try:
         include_paths.append(str(scenario_input.relative_to(repo_root)))
     except ValueError:
-        logger.warning("场景输入文件不在仓库内，跳过自动纳入提交白名单: %s", scenario_input)
+        logger.warning("Scenario input is outside repo root, skip auto-include: %s", scenario_input)
     include_paths = list(dict.fromkeys(include_paths))
 
-    logger.info("准备提交以下路径白名单中的改动: %s", ", ".join(include_paths))
+    logger.info("Preparing commit for whitelisted paths: %s", ", ".join(include_paths))
     if dry_run:
-        logger.info("dry-run 模式，不实际执行 git add/commit/push。")
+        logger.info("dry-run mode, skip git add/commit/push.")
         return
 
     run_command(["git", "checkout", scenario_branch], repo_root, logger)
@@ -77,7 +87,7 @@ def commit_and_push(
 
     status_result = run_command(["git", "status", "--short"], repo_root, logger, check=False)
     if not status_result.stdout.strip():
-        logger.info("当前没有可提交的改动，跳过 commit。")
+        logger.info("No staged changes detected, skip commit.")
     else:
         run_command(["git", "commit", "-m", commit_message], repo_root, logger)
 
@@ -89,7 +99,7 @@ def initialize_inspection(state: dict[str, Any]) -> dict[str, Any]:
     inspection.setdefault("status", "pending")
     inspection.setdefault("last_checked_at", None)
     inspection.setdefault("cycle_count", 0)
-    inspection.setdefault("message", "等待巡检")
+    inspection.setdefault("message", "Waiting for inspection")
     state["inspection"] = inspection
     return state
 
@@ -114,7 +124,7 @@ def freeze_cancelled_inspection(state: dict[str, Any]) -> dict[str, Any]:
     inspection = state.get("inspection") or {}
     cancelled_at = state.get("cancelled_at") or state.get("runtime_ended_at") or now_local_iso()
     inspection["status"] = "cancelled"
-    inspection["message"] = "任务已取消，停止巡检"
+    inspection["message"] = "Task cancelled, stop inspection"
     inspection.setdefault("last_checked_at", cancelled_at)
     inspection.setdefault("cycle_count", int(inspection.get("cycle_count") or 0))
     state["inspection"] = inspection
@@ -164,9 +174,10 @@ def handle_state_file(
 ) -> None:
     state = load_runtime_state(state_file)
     if not state:
-        logger.warning("未找到状态文件: %s", state_file)
+        logger.warning("State file not found: %s", state_file)
         return
 
+    logger = get_pipeline_logger(state, f"pipeline-monitor-{sanitize_name(state_file.stem)}")
     state = initialize_inspection(state)
     if should_stop(state, stop_event):
         if state.get("status") == "cancelled":
@@ -175,11 +186,11 @@ def handle_state_file(
 
     result_json = Path(state["result_json"])
     pid = state.get("agent", {}).get("pid")
-    logger.info("开始巡检任务: %s", state.get("scenario_branch"))
+    logger.info("Start inspection for scenario branch: %s", state.get("scenario_branch"))
 
     if state.get("status") == "dry_run":
         state["runtime_ended_at"] = state.get("runtime_ended_at") or now_local_iso()
-        update_inspection_state(state, status="done", message="dry-run 模式，未实际下发 Agent")
+        update_inspection_state(state, status="done", message="dry-run mode, agent not dispatched")
         persist_state(state_file, state, logger)
         return
 
@@ -194,12 +205,12 @@ def handle_state_file(
 
         if success:
             if state.get("status") == "pushed":
-                update_inspection_state(state, status="done", message="结果已提交并推送")
+                update_inspection_state(state, status="done", message="Result already committed and pushed")
                 persist_state(state_file, state, logger)
                 return
 
-            logger.info("检测到成功结果，准备提交并推送")
-            update_inspection_state(state, status="running", message="检测到成功结果，准备自动提交")
+            logger.info("Successful result detected, prepare commit and push")
+            update_inspection_state(state, status="running", message="Successful result detected, preparing auto-commit")
             persist_state(state_file, state, logger)
 
             latest = load_runtime_state(state_file) or state
@@ -220,15 +231,15 @@ def handle_state_file(
             update_inspection_state(
                 latest,
                 status="done",
-                message="结果已推送" if not dry_run else "dry-run 模式，检测到成功结果",
+                message="Result pushed" if not dry_run else "dry-run mode, successful result detected",
             )
             persist_state(state_file, latest, logger)
             return
 
-        logger.warning("结果 JSON 已生成，但 build 未成功")
+        logger.warning("Result JSON exists but build is not successful")
         state["status"] = "build_failed"
         state["runtime_ended_at"] = now_local_iso()
-        update_inspection_state(state, status="failed", message="构建失败，请检查结果输出")
+        update_inspection_state(state, status="failed", message="Build failed, check result payload")
         persist_state(state_file, state, logger)
         return
 
@@ -237,14 +248,14 @@ def handle_state_file(
             persist_state(state_file, freeze_cancelled_inspection(state), logger)
             return
         state["status"] = "inspection_running"
-        update_inspection_state(state, status="running", message="Agent 运行中，等待结果输出")
+        update_inspection_state(state, status="running", message="Agent still running, waiting for result")
         persist_state(state_file, state, logger)
         return
 
-    logger.warning("Agent 已退出，但未发现结果 JSON")
+    logger.warning("Agent exited but result JSON was not found")
     state["status"] = "agent_exited_without_result"
     state["runtime_ended_at"] = now_local_iso()
-    update_inspection_state(state, status="failed", message="Agent 已退出，未产出结果")
+    update_inspection_state(state, status="failed", message="Agent exited without result output")
     persist_state(state_file, state, logger)
 
 
@@ -258,37 +269,40 @@ def run_loop(
 ) -> None:
     interval = int(config["scheduler"]["poll_interval_seconds"])
     max_cycles = int(config["scheduler"]["max_cycles"])
-    logger.info("开始巡检循环，每 %s 秒检查一次，最多 %s 轮", interval, max_cycles)
+    logger.info("Start inspection loop: interval=%s seconds, max_cycles=%s", interval, max_cycles)
 
     for index in range(max_cycles):
         if stop_event and stop_event.is_set():
-            logger.info("收到停止信号，退出巡检循环")
+            logger.info("Stop signal received, exit inspection loop")
             return
 
-        logger.info("巡检轮次: %s/%s", index + 1, max_cycles)
+        logger.info("Inspection cycle: %s/%s", index + 1, max_cycles)
         state_files = collect_state_files(repo_root, config, state_arg)
         if not state_files:
-            logger.info("未检测到待巡检的状态文件")
+            logger.info("No state files found for inspection")
 
         for state_file in state_files:
             current = load_runtime_state(state_file)
+            state_logger = get_pipeline_logger(current, f"pipeline-monitor-{sanitize_name(state_file.stem)}") if current else logger
             if current and current.get("status") == "cancelled":
-                logger.info("检测到任务已取消，停止巡检: %s", state_file)
+                state_logger.info("Task already cancelled, stop inspection: %s", state_file)
                 return
             if stop_event and stop_event.is_set():
-                logger.info("收到停止信号，结束当前巡检")
+                state_logger.info("Stop signal received, abort current inspection")
                 return
 
+            state_logger.info("Processing inspection state file: %s", state_file)
             handle_state_file(repo_root, config, state_file, logger, dry_run, stop_event)
 
             current = load_runtime_state(state_file)
+            state_logger = get_pipeline_logger(current, f"pipeline-monitor-{sanitize_name(state_file.stem)}") if current else logger
             if current and current.get("status") == "cancelled":
-                logger.info("状态文件已进入取消态，停止后续巡检: %s", state_file)
+                state_logger.info("State moved to cancelled, stop further inspection: %s", state_file)
                 return
 
         if index < max_cycles - 1:
             if stop_event and stop_event.wait(interval):
-                logger.info("巡检等待被中断，退出")
+                logger.info("Inspection wait interrupted, exit loop")
                 return
             if not stop_event:
                 time.sleep(interval)
