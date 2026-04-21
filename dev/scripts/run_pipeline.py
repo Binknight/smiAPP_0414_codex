@@ -24,6 +24,7 @@ from common import (
     read_json,
     read_text,
     render_template,
+    reset_dir,
     resolve_path,
     run_command,
     sanitize_name,
@@ -315,6 +316,15 @@ def main() -> int:
     config_path = Path(args.config).resolve()
     config = load_config(config_path)
     repo_root = resolve_path(config_path.parent.parent.parent, config["paths"]["repo_root"])
+
+    cleanup_targets = [
+        repo_root / "dev" / "logs",
+        repo_root / "dev" / "mock-data",
+        repo_root / "dev" / "spec",
+        repo_root / "dev" / "state",
+    ]
+    for target in cleanup_targets:
+        reset_dir(target)
 
     input_json = args.input_json or config["paths"]["default_input_json"]
     input_path = resolve_path(repo_root, input_json)
