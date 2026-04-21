@@ -5,10 +5,12 @@ const els = {
   scenarioQuestion: document.getElementById("scenario-question"),
   appType: document.getElementById("app-type"),
   baseBranch: document.getElementById("base-branch"),
+  workspace: document.getElementById("workspace"),
+  workspaceCopyButton: document.getElementById("workspace-copy-button"),
   agentPid: document.getElementById("agent-pid"),
   startedAt: document.getElementById("started-at"),
   updatedAt: document.getElementById("updated-at"),
-  resultJson: document.getElementById("result-json"),
+  runtimeDuration: document.getElementById("runtime-duration"),
   progressLabel: document.getElementById("progress-label"),
   progressPercent: document.getElementById("progress-percent"),
   progressBar: document.getElementById("progress-bar"),
@@ -23,7 +25,6 @@ const els = {
   shutdownConsoleButton: document.getElementById("shutdown-console-button"),
   terminateHint: document.getElementById("terminate-hint"),
   agentRunningState: document.getElementById("agent-running-state"),
-  agentWorkspace: document.getElementById("agent-workspace"),
   agentName: document.getElementById("agent-name"),
   agentModel: document.getElementById("agent-model"),
   agentProvider: document.getElementById("agent-provider"),
@@ -34,8 +35,104 @@ const els = {
   agentSessionId: document.getElementById("agent-session-id"),
 };
 
+let latestTask = null;
+const BEIJING_OFFSET_MINUTES = 8 * 60;
+
 function fmt(value) {
   return value || "-";
+}
+
+function formatDisplayTime(value) {
+  if (!value) return "-";
+  const text = String(value).trim();
+  if (!text) return "-";
+  const match = text.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2})(?:[+-]\d{2}:\d{2}|Z)?$/);
+  if (match) {
+    return `${match[1]} ${match[2]}`;
+  }
+  return text;
+}
+
+function setText(el, value) {
+  const text = fmt(value);
+  el.textContent = text;
+  el.title = text;
+}
+
+function parseDisplayTimeMs(value) {
+  if (!value) return null;
+  const text = String(value).trim();
+  const match = text.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})(?:([+-])(\d{2}):(\d{2})|Z)?$/);
+  if (!match) return null;
+
+  const utcMs = Date.UTC(
+    Number(match[1]),
+    Number(match[2]) - 1,
+    Number(match[3]),
+    Number(match[4]),
+    Number(match[5]),
+    Number(match[6])
+  );
+
+  if (match[7]) {
+    const sign = match[7] === "+" ? 1 : -1;
+    const offsetMinutes = Number(match[8]) * 60 + Number(match[9]);
+    return utcMs - sign * offsetMinutes * 60 * 1000;
+  }
+
+  return utcMs - BEIJING_OFFSET_MINUTES * 60 * 1000;
+}
+
+function formatDurationSeconds(totalSeconds) {
+  const safeSeconds = Math.max(0, Math.floor(Number(totalSeconds) || 0));
+  const days = Math.floor(safeSeconds / 86400);
+  const hours = Math.floor((safeSeconds % 86400) / 3600);
+  const minutes = Math.floor((safeSeconds % 3600) / 60);
+  const seconds = safeSeconds % 60;
+  const hhmmss = [hours, minutes, seconds].map((part) => String(part).padStart(2, "0")).join(":");
+  return days > 0 ? `${days}d ${hhmmss}` : hhmmss;
+}
+
+function formatRuntimeDuration(startValue, endValue) {
+  const startMs = parseDisplayTimeMs(startValue);
+  if (startMs === null) return "-";
+  const endMs = endValue ? parseDisplayTimeMs(endValue) : Date.now();
+  if (endMs === null) return "-";
+  return formatDurationSeconds((endMs - startMs) / 1000);
+}
+
+function getRuntimeStart(task) {
+  return task.runtimeStartedAt || task.createdAt || task.agent.startedAt || null;
+}
+
+function isTerminalStatus(status) {
+  return ["cancelled", "pushed", "completed", "build_failed", "agent_exited_without_result", "dry_run_success_detected"].includes(status);
+}
+
+function getRuntimeEnd(task) {
+  if (task.runtimeEndedAt) return task.runtimeEndedAt;
+  if (isTerminalStatus(task.status)) return null;
+  return task.updatedAt || null;
+}
+
+async function copyToClipboard(text) {
+  if (!text || text === "-") return false;
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    await navigator.clipboard.writeText(text);
+    return true;
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.opacity = "0";
+  document.body.appendChild(textarea);
+  textarea.select();
+  const copied = document.execCommand("copy");
+  document.body.removeChild(textarea);
+  return copied;
 }
 
 function classifyStatus(status) {
@@ -48,28 +145,29 @@ function classifyStatus(status) {
 function renderTask(task) {
   const runtime = task.agent.runtime || {};
   els.title.textContent = task.scenarioBranch || task.scenarioKey || "当前任务";
-  els.statusPill.textContent = fmt(task.status);
-  els.statusPill.className = `status-pill ${classifyStatus(task.status)}`;
-  els.scenarioId.textContent = fmt(task.scenarioId);
-  els.scenarioQuestion.textContent = fmt(task.scenarioQuestion);
-  els.appType.textContent = fmt(task.appDisplayName || task.appType);
-  els.baseBranch.textContent = fmt(task.baseBranch);
-  els.agentPid.textContent = fmt(task.agent.pid);
-  els.startedAt.textContent = fmt(task.agent.startedAt);
-  els.updatedAt.textContent = fmt(task.updatedAt);
-  els.resultJson.textContent = fmt(task.resultJson);
-  els.agentRunningState.textContent = task.agent.running ? "运行中" : "未运行";
-  els.agentWorkspace.textContent = fmt(runtime.workspace);
-  els.agentName.textContent = fmt(runtime.name || task.agent.type);
-  els.agentModel.textContent = fmt(runtime.model);
-  els.agentProvider.textContent = fmt(runtime.provider);
-  els.agentApproval.textContent = fmt(runtime.approval_policy);
-  els.agentSandbox.textContent = fmt(runtime.sandbox_mode);
-  els.agentReasoningEffort.textContent = fmt(runtime.reasoning_effort);
-  els.agentReasoningSummary.textContent = fmt(runtime.reasoning_summary);
-  els.agentSessionId.textContent = fmt(runtime.session_id);
-  els.progressLabel.textContent = fmt(task.progress.label);
-  els.progressPercent.textContent = `${task.progress.percent || 0}%`;
+  setText(els.statusPill, task.status);
+  els.statusPill.className = `card-state ${classifyStatus(task.status)}`;
+  setText(els.scenarioId, task.scenarioId);
+  setText(els.scenarioQuestion, task.scenarioQuestion);
+  setText(els.appType, task.appDisplayName || task.appType);
+  setText(els.baseBranch, task.baseBranch);
+  setText(els.workspace, task.agent.workspace || runtime.workspace);
+  setText(els.agentPid, task.agent.pid);
+  setText(els.startedAt, formatDisplayTime(task.agent.startedAt));
+  setText(els.updatedAt, formatDisplayTime(task.updatedAt));
+  setText(els.agentRunningState, task.agent.running ? "运行中" : "未运行");
+  els.agentRunningState.className = `card-state ${task.agent.running ? "status-running" : "status-cancelled"}`;
+  setText(els.agentName, runtime.name || task.agent.type);
+  setText(els.agentModel, runtime.model);
+  setText(els.agentProvider, runtime.provider);
+  setText(els.agentApproval, runtime.approval_policy);
+  setText(els.agentSandbox, runtime.sandbox_mode);
+  setText(els.agentReasoningEffort, runtime.reasoning_effort);
+  setText(els.agentReasoningSummary, runtime.reasoning_summary);
+  setText(els.agentSessionId, task.agent.sessionId || runtime.session_id);
+  setText(els.progressLabel, task.progress.label);
+  setText(els.progressPercent, `${task.progress.percent || 0}%`);
+  els.progressPercent.className = "card-state status-progress";
   els.progressBar.style.width = `${task.progress.percent || 0}%`;
   els.steps.innerHTML = "";
 
@@ -82,17 +180,44 @@ function renderTask(task) {
     els.steps.appendChild(li);
   });
 
-  els.inspectionStatus.textContent = fmt(task.inspection.status);
-  els.inspectionCycles.textContent = fmt(task.inspection.cycleCount);
-  els.inspectionLast.textContent = fmt(task.inspection.lastCheckedAt);
-  els.inspectionMessage.textContent = fmt(task.inspection.message);
+  setText(els.inspectionStatus, task.inspection.status);
+  els.inspectionStatus.className = `card-state ${classifyStatus(task.inspection.status)}`;
+  setText(els.runtimeDuration, formatRuntimeDuration(getRuntimeStart(task), getRuntimeEnd(task)));
+  setText(els.inspectionCycles, task.inspection.cycleCount);
+  setText(els.inspectionLast, formatDisplayTime(task.inspection.lastCheckedAt));
+  setText(els.inspectionMessage, task.inspection.message);
 
-  const terminal = task.status === "cancelled" || task.status === "pushed" || task.status === "completed" || task.status === "build_failed" || task.status === "agent_exited_without_result";
+  const terminal = isTerminalStatus(task.status);
   els.terminateButton.disabled = terminal;
   if (terminal) {
     els.terminateHint.textContent = "当前状态不可再终止。";
   }
 }
+
+function refreshRuntimeDurationTick() {
+  if (!latestTask) return;
+  setText(els.runtimeDuration, formatRuntimeDuration(getRuntimeStart(latestTask), getRuntimeEnd(latestTask)));
+}
+
+els.workspaceCopyButton.addEventListener("click", async () => {
+  const workspace = els.workspace.textContent.trim();
+  try {
+    const copied = await copyToClipboard(workspace);
+    els.workspaceCopyButton.textContent = copied ? "✓" : "!";
+    els.workspaceCopyButton.title = copied ? "已复制" : "复制失败";
+    window.setTimeout(() => {
+      els.workspaceCopyButton.textContent = "⧉";
+      els.workspaceCopyButton.title = "复制工作空间";
+    }, 1000);
+  } catch (error) {
+    els.workspaceCopyButton.textContent = "!";
+    els.workspaceCopyButton.title = `复制失败: ${error}`;
+    window.setTimeout(() => {
+      els.workspaceCopyButton.textContent = "⧉";
+      els.workspaceCopyButton.title = "复制工作空间";
+    }, 1200);
+  }
+});
 
 async function refreshLogs() {
   const res = await fetch("/api/task/current/logs", { cache: "no-store" });
@@ -104,6 +229,7 @@ async function refreshLogs() {
 async function refreshTask() {
   const res = await fetch("/api/task/current", { cache: "no-store" });
   const task = await res.json();
+  latestTask = task;
   renderTask(task);
 }
 
@@ -149,3 +275,4 @@ els.shutdownConsoleButton.addEventListener("click", async () => {
 
 refreshAll();
 window.setInterval(refreshAll, 2000);
+window.setInterval(refreshRuntimeDurationTick, 1000);

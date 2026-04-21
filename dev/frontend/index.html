@@ -15,22 +15,20 @@
             <h1 id="task-title">加载中</h1>
             <p class="hero-copy" id="scenario-question">-</p>
           </div>
-          <div class="hero-side">
-            <div class="status-panel">
-              <span class="status-label">流水线状态</span>
-              <div class="status-pill" id="status-pill">-</div>
-            </div>
-          </div>
         </div>
 
         <div class="metric-strip">
           <article class="metric-card">
-            <span>仿真 APP 类型</span>
-            <strong id="app-type">-</strong>
+            <span>流水线状态</span>
+            <strong id="status-pill">-</strong>
           </article>
           <article class="metric-card">
             <span>仿真 APP 基线</span>
             <strong id="base-branch">-</strong>
+          </article>
+          <article class="metric-card">
+            <span>仿真 APP 类型</span>
+            <strong id="app-type">-</strong>
           </article>
           <article class="metric-card">
             <span>场景编号</span>
@@ -41,40 +39,28 @@
             <strong id="updated-at">-</strong>
           </article>
         </div>
+
+        <div class="workspace-row">
+          <article class="metric-card workspace-card">
+            <div class="metric-inline workspace-label-row">
+              <span>工作空间</span>
+              <button id="workspace-copy-button" class="icon-button" type="button" aria-label="复制工作空间" title="复制工作空间">⧉</button>
+            </div>
+            <strong id="workspace">-</strong>
+          </article>
+        </div>
       </section>
 
       <section class="dashboard-body">
         <div class="main-column">
           <section class="two-up">
-            <article class="card agent-card compact-card">
-              <div class="card-header">
-                <div>
-                  <h2>Agent 工作状态</h2>
-                  <p class="card-note">执行环境、模型参数与当前会话信息</p>
-                </div>
-                <span class="subtle-tag" id="agent-running-state">-</span>
-              </div>
-              <div class="info-grid plain-grid">
-                <div class="info-cell info-cell-wide"><span>工作空间</span><strong id="agent-workspace">-</strong></div>
-                <div class="info-cell"><span>代理</span><strong id="agent-name">-</strong></div>
-                <div class="info-cell"><span>Agent PID</span><strong id="agent-pid">-</strong></div>
-                <div class="info-cell"><span>模型</span><strong id="agent-model">-</strong></div>
-                <div class="info-cell"><span>提供商</span><strong id="agent-provider">-</strong></div>
-                <div class="info-cell"><span>审批</span><strong id="agent-approval">-</strong></div>
-                <div class="info-cell"><span>沙盒权限</span><strong id="agent-sandbox">-</strong></div>
-                <div class="info-cell"><span>推理等级</span><strong id="agent-reasoning-effort">-</strong></div>
-                <div class="info-cell"><span>推理摘要</span><strong id="agent-reasoning-summary">-</strong></div>
-                <div class="info-cell info-cell-wide"><span>会话 ID</span><strong id="agent-session-id">-</strong></div>
-              </div>
-            </article>
-
             <article class="card progress-card compact-card">
               <div class="card-header">
                 <div>
                   <h2>任务进度</h2>
                   <p class="card-note">初始化到完成的水平推进轨迹</p>
                 </div>
-                <strong class="percent-badge" id="progress-percent">0%</strong>
+                <strong class="card-state" id="progress-percent">0%</strong>
               </div>
 
               <div class="progress-summary">
@@ -90,15 +76,35 @@
 
               <ol class="progress-steps" id="steps"></ol>
             </article>
+
+            <article class="card agent-card compact-card">
+              <div class="card-header">
+                <div>
+                  <h2>Agent 信息</h2>
+                  <p class="card-note">执行环境、模型参数与当前会话信息</p>
+                </div>
+                <strong class="card-state" id="agent-running-state">-</strong>
+              </div>
+              <div class="info-grid plain-grid">
+                <div class="info-cell"><span>代理</span><strong id="agent-name">-</strong></div>
+                <div class="info-cell"><span>Agent PID</span><strong id="agent-pid">-</strong></div>
+                <div class="info-cell"><span>模型</span><strong id="agent-model">-</strong></div>
+                <div class="info-cell"><span>提供商</span><strong id="agent-provider">-</strong></div>
+                <div class="info-cell"><span>审批</span><strong id="agent-approval">-</strong></div>
+                <div class="info-cell"><span>沙盒权限</span><strong id="agent-sandbox">-</strong></div>
+                <div class="info-cell"><span>推理等级</span><strong id="agent-reasoning-effort">-</strong></div>
+                <div class="info-cell"><span>推理摘要</span><strong id="agent-reasoning-summary">-</strong></div>
+                <div class="info-cell info-cell-wide"><span>会话 ID</span><strong id="agent-session-id">-</strong></div>
+              </div>
+            </article>
           </section>
 
           <section class="card logs-card">
             <div class="card-header">
               <div>
                 <h2>日志区</h2>
-                <p class="card-note">完整展示流水线与 Agent 执行日志</p>
+                <p class="card-note">流水线日志与Agent全量日志</p>
               </div>
-              <span class="subtle-tag">Full Stream</span>
             </div>
 
             <div class="logs-grid">
@@ -122,18 +128,18 @@
           <div class="card-header">
             <div>
               <h2>任务控制</h2>
-              <p class="card-note">巡检态势、结果文件与终止控制</p>
+              <p class="card-note">巡检态势与终止控制</p>
             </div>
-            <div class="inspection-pill" id="inspection-status">-</div>
+            <strong class="card-state" id="inspection-status">-</strong>
           </div>
 
-          <div class="info-grid plain-grid control-meta">
-            <div class="info-cell"><span>巡检轮次</span><strong id="inspection-cycles">-</strong></div>
-            <div class="info-cell"><span>最近检查</span><strong id="inspection-last">-</strong></div>
-            <div class="info-cell info-cell-wide"><span>巡检说明</span><strong id="inspection-message">-</strong></div>
-            <div class="info-cell info-cell-wide"><span>结果文件</span><strong id="result-json">-</strong></div>
-            <div class="info-cell info-cell-wide"><span>开始时间</span><strong id="started-at">-</strong></div>
-          </div>
+            <div class="info-grid plain-grid control-meta">
+              <div class="info-cell info-cell-wide"><span>运行时长</span><strong id="runtime-duration">-</strong></div>
+              <div class="info-cell"><span>巡检轮次</span><strong id="inspection-cycles">-</strong></div>
+              <div class="info-cell"><span>最近检查</span><strong id="inspection-last">-</strong></div>
+              <div class="info-cell info-cell-wide"><span>开始时间</span><strong id="started-at">-</strong></div>
+              <div class="info-cell info-cell-wide"><span>巡检说明</span><strong id="inspection-message">-</strong></div>
+            </div>
 
           <div class="control-actions">
             <button id="terminate-button" type="button">终止任务</button>

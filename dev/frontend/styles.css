@@ -77,7 +77,7 @@ body {
 
 .hero-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.6fr) 280px;
+  grid-template-columns: minmax(0, 1fr);
   gap: 14px;
   align-items: start;
   margin-bottom: 12px;
@@ -85,11 +85,6 @@ body {
 
 .hero-main {
   min-width: 0;
-}
-
-.hero-side {
-  display: flex;
-  justify-content: flex-end;
 }
 
 .eyebrow {
@@ -126,53 +121,43 @@ p {
   overflow: hidden;
 }
 
-.status-panel {
-  width: 100%;
-  padding: 12px 14px;
-}
-
-.status-label {
-  display: block;
-  margin-bottom: 12px;
-  color: var(--muted);
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.status-pill,
-.inspection-pill,
-.subtle-tag,
-.percent-badge {
+.card-state {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 42px;
-  padding: 8px 14px;
-  border: 1px solid currentColor;
   font-size: 13px;
   font-weight: 700;
-  background: rgba(13, 138, 114, 0.1);
+  line-height: 1.2;
   color: var(--accent);
+  min-width: 0;
+  white-space: nowrap;
 }
 
-.inspection-pill,
-.subtle-tag {
-  min-height: 38px;
-  border-color: var(--panel-border);
-  color: var(--muted);
-  background: var(--panel-2);
+.card-header > .card-state {
+  align-self: center;
 }
 
-.percent-badge {
+.status-success {
+  color: var(--success);
+}
+
+.status-failed,
+.status-cancelled {
+  color: var(--danger);
+}
+
+.status-progress {
   color: var(--accent-2);
-  background: rgba(15, 78, 201, 0.08);
 }
 
 .metric-strip {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 10px;
+}
+
+.workspace-row {
+  margin-top: 10px;
 }
 
 .metric-card,
@@ -185,21 +170,102 @@ p {
 
 .metric-card span,
 .info-cell span,
-.progress-current span {
+.progress-current span,
+.metric-card strong,
+.info-cell strong,
+.progress-current strong {
   display: block;
+  color: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.45;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.metric-card span,
+.info-cell span,
+.progress-current span {
   margin-bottom: 4px;
   color: var(--muted);
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .metric-card strong,
 .info-cell strong,
 .progress-current strong {
-  display: block;
-  line-height: 1.45;
   overflow-wrap: anywhere;
+}
+
+.metric-card strong,
+.control-meta .info-cell strong {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.metric-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.metric-inline strong {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.workspace-label-row {
+  justify-content: flex-start;
+  margin-bottom: 4px;
+}
+
+.workspace-label-row span {
+  margin-bottom: 0;
+}
+
+#workspace {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+  font-size: 12px;
+}
+
+.workspace-card {
+  width: 100%;
+}
+
+.icon-button {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  border: 1px solid rgba(19, 32, 44, 0.18);
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--text);
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.icon-button:hover {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(19, 32, 44, 0.3);
+  transform: translateY(-1px);
+}
+
+.icon-button:active {
+  transform: translateY(0);
+}
+
+.icon-button:focus-visible {
+  outline: 2px solid rgba(15, 78, 201, 0.35);
+  outline-offset: 2px;
 }
 
 .card-header {
@@ -248,6 +314,30 @@ p {
 
 .info-cell-wide {
   grid-column: 1 / -1;
+}
+
+.control-meta {
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.control-meta .info-cell {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+}
+
+.control-meta .info-cell span {
+  margin-bottom: 0;
+}
+
+.control-meta .info-cell-wide {
+  grid-column: auto;
+}
+
+.control-meta .info-cell strong {
+  min-width: 0;
 }
 
 .compact-card {
@@ -487,18 +577,15 @@ p {
 }
 
 .status-running {
-  background: rgba(13, 138, 114, 0.12);
   color: var(--accent);
 }
 
 .status-success {
-  background: rgba(24, 121, 78, 0.12);
   color: var(--success);
 }
 
 .status-failed,
 .status-cancelled {
-  background: rgba(180, 35, 24, 0.12);
   color: var(--danger);
 }
 
@@ -510,10 +597,6 @@ p {
   .metric-strip,
   .progress-steps {
     grid-template-columns: 1fr;
-  }
-
-  .hero-side {
-    justify-content: flex-start;
   }
 }
 

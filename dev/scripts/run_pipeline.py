@@ -392,6 +392,7 @@ def main() -> int:
     logger.info("已输出任务 Prompt 快照: %s", task_prompt_path)
     scenario_question = str(scenario_payload.get("question") or scenario_payload.get("prompt") or "").strip()
 
+    task_started_at = now_local_iso()
     state = initialize_inspection(
         {
             "scenario_id": scenario_id,
@@ -403,8 +404,10 @@ def main() -> int:
             "base_branch": base_branch,
             "scenario_branch": scenario_branch,
             "status": "initialized",
-            "created_at": now_local_iso(),
-            "updated_at": now_local_iso(),
+            "created_at": task_started_at,
+            "runtime_started_at": task_started_at,
+            "runtime_ended_at": None,
+            "updated_at": task_started_at,
             "log_file": str(log_file),
             "mock_data_dir": str(runtime_paths["mock_dir"]),
             "result_json": str(runtime_paths["result_json"]),
@@ -458,8 +461,10 @@ def main() -> int:
             result_payload = read_json(Path(state["result_json"]))
             success = detect_build_success(result_payload, config["scheduler"]["success_values"])
             state["status"] = "completed" if success else "agent_finished_waiting_review"
+            state["runtime_ended_at"] = now_local_iso()
         else:
             state["status"] = "agent_exited_without_result"
+            state["runtime_ended_at"] = now_local_iso()
         state["updated_at"] = now_local_iso()
         update_runtime_state(state_file, state, logger)
 

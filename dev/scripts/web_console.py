@@ -1,9 +1,10 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import argparse
 import json
 import mimetypes
 import os
+import signal
 import socket
 import subprocess
 import threading
@@ -15,6 +16,7 @@ from urllib.parse import urlparse
 
 from common import (
     configure_stdio,
+    format_display_time,
     ensure_dir,
     is_process_running,
     load_runtime_state,
@@ -72,6 +74,72 @@ def terminate_pid(pid: int) -> bool:
         **windows_subprocess_kwargs(),
     )
     return result.returncode == 0
+
+
+def list_web_console_pids_for_state(state_file: Path) -> list[int]:
+    normalized = str(state_file.resolve()).lower()
+    script_name = str((Path(__file__).resolve())).lower()
+    current_pid = os.getpid()
+    process_query = subprocess.run(
+        [
+            "powershell",
+            "-Command",
+            (
+                "Get-CimInstance Win32_Process | "
+                "Where-Object { $_.Name -eq 'python.exe' -or $_.Name -eq 'py.exe' } | "
+                "Select-Object ProcessId, CommandLine | ConvertTo-Json -Compress"
+            ),
+        ],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        check=False,
+        **windows_subprocess_kwargs(),
+    )
+    if process_query.returncode != 0 or not process_query.stdout.strip():
+        return []
+
+    try:
+        payload = json.loads(process_query.stdout)
+    except json.JSONDecodeError:
+        return []
+
+    if isinstance(payload, dict):
+        payload = [payload]
+
+    matches: list[int] = []
+    for item in payload:
+        pid = int(item.get("ProcessId") or 0)
+        command_line = str(item.get("CommandLine") or "").lower()
+        if not pid or pid == current_pid:
+            continue
+        if "web_console.py" not in command_line:
+            continue
+        if script_name not in command_line:
+            continue
+        if normalized not in command_line:
+            continue
+        matches.append(pid)
+    return matches
+
+
+def stop_pid(pid: int) -> bool:
+    try:
+        os.kill(pid, signal.SIGTERM)
+    except OSError:
+        return False
+    return True
+
+
+def stop_other_web_consoles(state_file: Path, logger: Any) -> list[int]:
+    stopped: list[int] = []
+    for pid in list_web_console_pids_for_state(state_file):
+        if stop_pid(pid):
+            stopped.append(pid)
+    if stopped:
+        logger.info("已停止同任务的历史 Web 控制台进程: %s", ", ".join(str(pid) for pid in stopped))
+    return stopped
 
 
 def compute_progress(state: dict[str, Any]) -> dict[str, Any]:
@@ -134,6 +202,15 @@ def infer_scenario_question(state: dict[str, Any]) -> str | None:
 
 def build_agent_runtime_payload(state: dict[str, Any]) -> dict[str, Any]:
     runtime = dict(state.get("agent", {}).get("runtime") or {})
+    agent_state = state.get("agent") or {}
+    session_id = (
+        runtime.get("session_id")
+        or runtime.get("sessionId")
+        or agent_state.get("session_id")
+        or agent_state.get("sessionId")
+        or os.environ.get("CODEX_SESSION_ID")
+        or os.environ.get("OPENAI_SESSION_ID")
+    )
     runtime.setdefault("workspace", str(Path(__file__).resolve().parents[2]))
     runtime.setdefault("name", "codex cli")
     runtime.setdefault("model", os.environ.get("CODEX_MODEL", "gpt-5.4"))
@@ -142,7 +219,8 @@ def build_agent_runtime_payload(state: dict[str, Any]) -> dict[str, Any]:
     runtime.setdefault("sandbox_mode", os.environ.get("CODEX_SANDBOX_MODE", "danger-full-access"))
     runtime.setdefault("reasoning_effort", os.environ.get("CODEX_REASONING_EFFORT", "medium"))
     runtime.setdefault("reasoning_summary", os.environ.get("CODEX_REASONING_SUMMARY", "none"))
-    runtime.setdefault("session_id", os.environ.get("CODEX_SESSION_ID") or os.environ.get("OPENAI_SESSION_ID"))
+    if session_id:
+        runtime["session_id"] = session_id
     return runtime
 
 
@@ -155,6 +233,23 @@ def build_task_payload(state_file: Path) -> dict[str, Any]:
     result_payload = state.get("result_payload")
     if result_payload is None and result_json.exists():
         result_payload = read_json(result_json)
+    agent_runtime = build_agent_runtime_payload(state)
+    runtime_started_at = state.get("runtime_started_at") or state.get("created_at")
+    runtime_ended_at = state.get("runtime_ended_at")
+    if runtime_ended_at is None and state.get("status") in {
+        "cancelled",
+        "pushed",
+        "completed",
+        "build_failed",
+        "agent_exited_without_result",
+        "dry_run_success_detected",
+    }:
+        runtime_ended_at = (
+            state.get("cancelled_at")
+            or state.get("pushed_at")
+            or state.get("completed_at")
+            or state.get("updated_at")
+        )
     return {
         "scenarioId": state.get("scenario_id"),
         "scenarioKey": state.get("scenario_key"),
@@ -165,8 +260,10 @@ def build_task_payload(state_file: Path) -> dict[str, Any]:
         "baseBranch": state.get("base_branch"),
         "scenarioBranch": state.get("scenario_branch"),
         "status": state.get("status"),
-        "createdAt": state.get("created_at"),
-        "updatedAt": state.get("updated_at"),
+        "createdAt": format_display_time(state.get("created_at")),
+        "updatedAt": format_display_time(state.get("updated_at")),
+        "runtimeStartedAt": format_display_time(runtime_started_at),
+        "runtimeEndedAt": format_display_time(runtime_ended_at),
         "logFile": state.get("log_file"),
         "resultJson": state.get("result_json"),
         "resultExists": result_json.exists(),
@@ -174,15 +271,17 @@ def build_task_payload(state_file: Path) -> dict[str, Any]:
         "agent": {
             "type": state.get("agent", {}).get("type"),
             "pid": state.get("agent", {}).get("pid"),
-            "startedAt": state.get("agent", {}).get("started_at"),
+            "startedAt": format_display_time(state.get("agent", {}).get("started_at")),
             "running": is_process_running(state.get("agent", {}).get("pid")),
             "logPath": state.get("agent", {}).get("log_path"),
             "command": state.get("agent", {}).get("command"),
-            "runtime": build_agent_runtime_payload(state),
+            "workspace": agent_runtime.get("workspace"),
+            "sessionId": agent_runtime.get("session_id"),
+            "runtime": agent_runtime,
         },
         "inspection": {
             "status": inspection.get("status"),
-            "lastCheckedAt": inspection.get("last_checked_at"),
+            "lastCheckedAt": format_display_time(inspection.get("last_checked_at")),
             "cycleCount": inspection.get("cycle_count"),
             "message": inspection.get("message"),
         },
@@ -270,16 +369,25 @@ class ConsoleHandler(BaseHTTPRequestHandler):
                 terminate_pid(int(pid))
             state["status"] = "cancelled"
             state["cancelled_at"] = now_local_iso()
+            state["runtime_ended_at"] = state["cancelled_at"]
             state["cancel_reason"] = "terminated_from_web"
             inspection = state.get("inspection") or {}
             inspection["status"] = "cancelled"
             inspection["message"] = "任务已由控制台终止"
-            inspection["last_checked_at"] = now_local_iso()
+            inspection["last_checked_at"] = inspection.get("last_checked_at") or state["cancelled_at"]
             state["inspection"] = inspection
-            state["updated_at"] = now_local_iso()
+            state["updated_at"] = state["cancelled_at"]
             update_runtime_state(self.server.state_file, state, self.server.logger)
+            stopped_pids = stop_other_web_consoles(self.server.state_file, self.server.logger)
             self.server.stop_event.set()
-            self._send_json({"ok": True, "terminated": running, "status": state["status"]})
+            self._send_json(
+                {
+                    "ok": True,
+                    "terminated": running,
+                    "status": state["status"],
+                    "stoppedConsolePids": stopped_pids,
+                }
+            )
             return
 
         if parsed.path == "/api/console/shutdown":
@@ -365,6 +473,8 @@ def main() -> int:
     static_root = ensure_dir(repo_root / "dev" / "frontend")
     stop_event = threading.Event()
 
+    stop_other_web_consoles(state_file, logger)
+
     handle_state_file(repo_root, config, state_file, logger, args.dry_run)
     start_inspection_thread(repo_root, config, state_file, logger, args.dry_run, stop_event)
     server = ConsoleServer(
@@ -376,11 +486,11 @@ def main() -> int:
         stop_event=stop_event,
     )
     mark_web_state(state_file, logger, host, port)
-    logger.info("Web 控制台已启动: http://%s:%s", host, port)
+    logger.info("Web æŽ§åˆ¶å°å·²å¯åŠ¨: http://%s:%s", host, port)
     try:
         server.serve_forever(poll_interval=0.5)
     except KeyboardInterrupt:
-        logger.info("收到中断信号，准备关闭 Web 控制台。")
+        logger.info("æ”¶åˆ°ä¸­æ–­ä¿¡å·ï¼Œå‡†å¤‡å…³é—­ Web æŽ§åˆ¶å°ã€‚")
     finally:
         stop_event.set()
         server.server_close()
@@ -389,3 +499,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
