@@ -8,73 +8,148 @@
   </head>
   <body>
     <main class="shell">
-      <section class="hero">
-        <div>
-          <p class="eyebrow">Current Pipeline</p>
-          <h1 id="task-title">加载中</h1>
-          <p class="hero-meta" id="task-branch">-</p>
+      <section class="card hero-card">
+        <div class="hero-grid">
+          <div class="hero-main">
+            <p class="eyebrow">Simulation Pipeline</p>
+            <h1 id="task-title">加载中</h1>
+            <p class="hero-copy" id="scenario-question">-</p>
+          </div>
         </div>
-        <div class="status-pill" id="status-pill">-</div>
+
+        <div class="metric-strip">
+          <article class="metric-card">
+            <span>流水线状态</span>
+            <strong id="status-pill">-</strong>
+          </article>
+          <article class="metric-card">
+            <span>仿真 APP 基线</span>
+            <strong id="base-branch">-</strong>
+          </article>
+          <article class="metric-card">
+            <span>仿真 APP 类型</span>
+            <strong id="app-type">-</strong>
+          </article>
+          <article class="metric-card">
+            <span>场景编号</span>
+            <strong id="scenario-id">-</strong>
+          </article>
+          <article class="metric-card">
+            <span>最近更新时间</span>
+            <strong id="updated-at">-</strong>
+          </article>
+        </div>
+
+        <div class="workspace-row">
+          <article class="metric-card workspace-card">
+            <div class="metric-inline workspace-label-row">
+              <span>工作空间</span>
+              <button id="workspace-copy-button" class="icon-button" type="button" aria-label="复制工作空间" title="复制工作空间">⧉</button>
+            </div>
+            <strong id="workspace">-</strong>
+          </article>
+        </div>
       </section>
 
-      <section class="grid">
-        <article class="card">
-          <h2>任务信息</h2>
-          <div class="info-list">
-            <div><span>场景 ID</span><strong id="scenario-id">-</strong></div>
-            <div><span>APP 类型</span><strong id="app-type">-</strong></div>
-            <div><span>Agent PID</span><strong id="agent-pid">-</strong></div>
-            <div><span>开始时间</span><strong id="started-at">-</strong></div>
-            <div><span>最后更新</span><strong id="updated-at">-</strong></div>
-            <div><span>结果文件</span><strong id="result-json">-</strong></div>
-          </div>
-        </article>
+      <section class="dashboard-body">
+        <div class="main-column">
+          <section class="two-up">
+            <article class="card progress-card compact-card">
+              <div class="card-header">
+                <div>
+                  <h2>任务进度</h2>
+                  <p class="card-note">初始化到完成的水平推进轨迹</p>
+                </div>
+                <strong class="card-state" id="progress-percent">0%</strong>
+              </div>
 
-        <article class="card">
-          <h2>进度</h2>
-          <div class="progress-head">
-            <strong id="progress-label">-</strong>
-            <span id="progress-percent">0%</span>
-          </div>
-          <div class="progress-track"><div id="progress-bar"></div></div>
-          <ol class="steps" id="steps"></ol>
-        </article>
-      </section>
+              <div class="progress-summary">
+                <div class="progress-current">
+                  <span>当前阶段</span>
+                  <strong id="progress-label">-</strong>
+                </div>
+              </div>
 
-      <section class="grid">
-        <article class="card">
-          <h2>巡检状态</h2>
-          <div class="info-list">
-            <div><span>状态</span><strong id="inspection-status">-</strong></div>
-            <div><span>巡检轮次</span><strong id="inspection-cycles">-</strong></div>
-            <div><span>最近检查</span><strong id="inspection-last">-</strong></div>
-            <div><span>说明</span><strong id="inspection-message">-</strong></div>
-          </div>
-        </article>
+              <div class="progress-track-shell">
+                <div class="progress-track"><div id="progress-bar"></div></div>
+              </div>
 
-        <article class="card danger">
-          <h2>任务控制</h2>
-          <p>点击后会终止当前 Agent 进程，并将任务状态标记为已取消。</p>
-          <div class="button-row">
+              <ol class="progress-steps" id="steps"></ol>
+            </article>
+
+            <article class="card agent-card compact-card">
+              <div class="card-header">
+                <div>
+                  <h2>Agent 信息</h2>
+                  <p class="card-note">执行环境、模型参数与当前会话信息</p>
+                </div>
+                <strong class="card-state" id="agent-running-state">-</strong>
+              </div>
+              <div class="info-grid plain-grid">
+                <div class="info-cell"><span>代理</span><strong id="agent-name">-</strong></div>
+                <div class="info-cell"><span>Agent PID</span><strong id="agent-pid">-</strong></div>
+                <div class="info-cell"><span>模型</span><strong id="agent-model">-</strong></div>
+                <div class="info-cell"><span>提供商</span><strong id="agent-provider">-</strong></div>
+                <div class="info-cell"><span>审批</span><strong id="agent-approval">-</strong></div>
+                <div class="info-cell"><span>沙盒权限</span><strong id="agent-sandbox">-</strong></div>
+                <div class="info-cell"><span>推理等级</span><strong id="agent-reasoning-effort">-</strong></div>
+                <div class="info-cell"><span>推理摘要</span><strong id="agent-reasoning-summary">-</strong></div>
+                <div class="info-cell info-cell-wide"><span>会话 ID</span><strong id="agent-session-id">-</strong></div>
+              </div>
+            </article>
+          </section>
+
+          <section class="card logs-card">
+            <div class="card-header">
+              <div>
+                <h2>日志区</h2>
+                <p class="card-note">流水线日志与Agent全量日志</p>
+              </div>
+            </div>
+
+            <div class="logs-grid">
+              <article class="log-panel">
+                <div class="log-head">
+                  <h3>流水线日志</h3>
+                </div>
+                <pre id="pipeline-log">加载中...</pre>
+              </article>
+              <article class="log-panel">
+                <div class="log-head">
+                  <h3>Agent 日志</h3>
+                </div>
+                <pre id="agent-log">加载中...</pre>
+              </article>
+            </div>
+          </section>
+        </div>
+
+        <aside class="card control-card danger">
+          <div class="card-header">
+            <div>
+              <h2>任务控制</h2>
+              <p class="card-note">巡检态势与终止控制</p>
+            </div>
+            <strong class="card-state" id="inspection-status">-</strong>
+          </div>
+
+            <div class="info-grid plain-grid control-meta">
+              <div class="info-cell info-cell-wide"><span>运行时长</span><strong id="runtime-duration">-</strong></div>
+              <div class="info-cell"><span>巡检轮次</span><strong id="inspection-cycles">-</strong></div>
+              <div class="info-cell"><span>最近检查</span><strong id="inspection-last">-</strong></div>
+              <div class="info-cell info-cell-wide"><span>开始时间</span><strong id="started-at">-</strong></div>
+              <div class="info-cell info-cell-wide"><span>巡检说明</span><strong id="inspection-message">-</strong></div>
+            </div>
+
+          <div class="control-actions">
             <button id="terminate-button" type="button">终止任务</button>
             <button id="shutdown-console-button" class="secondary-button" type="button">关闭控制台</button>
+            <p class="action-hint" id="terminate-hint"></p>
           </div>
-          <p class="action-hint" id="terminate-hint"></p>
-        </article>
-      </section>
-
-      <section class="grid logs">
-        <article class="card">
-          <h2>Pipeline Log</h2>
-          <pre id="pipeline-log">加载中...</pre>
-        </article>
-        <article class="card">
-          <h2>Agent Log</h2>
-          <pre id="agent-log">加载中...</pre>
-        </article>
+        </aside>
       </section>
     </main>
 
     <script src="/app.js"></script>
   </body>
-  </html>
+</html>

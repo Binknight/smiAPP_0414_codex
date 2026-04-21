@@ -4,11 +4,14 @@ import json
 import logging
 import os
 import re
+import shutil
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
+
+BEIJING_TZ = timezone(timedelta(hours=8), name="UTC+08:00")
 
 
 def configure_stdio() -> None:
@@ -19,11 +22,32 @@ def configure_stdio() -> None:
 
 
 def now_local_iso() -> str:
-    return datetime.now().astimezone().isoformat(timespec="seconds")
+    return datetime.now(BEIJING_TZ).strftime("%Y-%m-%d %H:%M:%S")
+
+
+def format_display_time(value: Any) -> str | None:
+    if value is None:
+        return None
+
+    text = str(value).strip()
+    if not text:
+        return None
+
+    try:
+        parsed = datetime.fromisoformat(text)
+    except ValueError:
+        try:
+            parsed = datetime.strptime(text, "%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            return text
+
+    if parsed.tzinfo is not None:
+        parsed = parsed.astimezone(BEIJING_TZ)
+    return parsed.strftime("%Y-%m-%d %H:%M:%S")
 
 
 def now_local_compact_minute() -> str:
-    return datetime.now().astimezone().strftime("%Y%m%d%H%M")
+    return datetime.now(BEIJING_TZ).strftime("%Y%m%d%H%M")
 
 
 def utc_now_compact() -> str:
@@ -38,6 +62,13 @@ def resolve_path(repo_root: Path, value: str) -> Path:
 
 
 def ensure_dir(path: Path) -> Path:
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def reset_dir(path: Path) -> Path:
+    if path.exists():
+        shutil.rmtree(path)
     path.mkdir(parents=True, exist_ok=True)
     return path
 

@@ -24,6 +24,7 @@ from common import (
     read_json,
     read_text,
     render_template,
+    reset_dir,
     resolve_path,
     run_command,
     sanitize_name,
@@ -177,6 +178,25 @@ def summarize_agent_command(command: list[str]) -> str:
     return format_command(command)
 
 
+def build_agent_runtime_info(
+    repo_root: Path,
+    config: dict[str, Any],
+) -> dict[str, Any]:
+    agent_key = config["agent"]["active"]
+    agent_definition = config["agent"]["definitions"].get(agent_key, {})
+    return {
+        "workspace": str(repo_root),
+        "name": str(agent_definition.get("display_name", agent_key)).replace("_", " ").lower(),
+        "model": os.environ.get("CODEX_MODEL", "gpt-5.4"),
+        "provider": os.environ.get("CODEX_PROVIDER", "openai"),
+        "approval_policy": os.environ.get("CODEX_APPROVAL_POLICY", "never"),
+        "sandbox_mode": os.environ.get("CODEX_SANDBOX_MODE", "danger-full-access"),
+        "reasoning_effort": os.environ.get("CODEX_REASONING_EFFORT", "medium"),
+        "reasoning_summary": os.environ.get("CODEX_REASONING_SUMMARY", "none"),
+        "session_id": os.environ.get("CODEX_SESSION_ID") or os.environ.get("OPENAI_SESSION_ID"),
+    }
+
+
 def instantiate_agent_command(
     agent_definition: dict[str, Any],
     task_prompt: str,
@@ -297,6 +317,15 @@ def main() -> int:
     config = load_config(config_path)
     repo_root = resolve_path(config_path.parent.parent.parent, config["paths"]["repo_root"])
 
+    cleanup_targets = [
+        repo_root / "dev" / "logs",
+        repo_root / "dev" / "mock-data",
+        repo_root / "dev" / "spec",
+        repo_root / "dev" / "state",
+    ]
+    for target in cleanup_targets:
+        reset_dir(target)
+
     input_json = args.input_json or config["paths"]["default_input_json"]
     input_path = resolve_path(repo_root, input_json)
     if not input_path.exists():
@@ -361,25 +390,31 @@ def main() -> int:
     task_prompt = render_template(template_text, prompt_variables)
     task_prompt_path = write_task_prompt_snapshot(repo_root, task_prompt)
     logger.info("已输出任务 Prompt 快照: %s", task_prompt_path)
+    scenario_question = str(scenario_payload.get("question") or scenario_payload.get("prompt") or "").strip()
 
+    task_started_at = now_local_iso()
     state = initialize_inspection(
         {
             "scenario_id": scenario_id,
             "scenario_key": scenario_key,
             "scenario_input": str(input_path),
+            "scenario_question": scenario_question,
             "app_type": app_key,
             "app_display_name": app_info.get("display_name", app_key),
             "base_branch": base_branch,
             "scenario_branch": scenario_branch,
             "status": "initialized",
-            "created_at": now_local_iso(),
-            "updated_at": now_local_iso(),
+            "created_at": task_started_at,
+            "runtime_started_at": task_started_at,
+            "runtime_ended_at": None,
+            "updated_at": task_started_at,
             "log_file": str(log_file),
             "mock_data_dir": str(runtime_paths["mock_dir"]),
             "result_json": str(runtime_paths["result_json"]),
             "web": {},
             "agent": {
                 "type": config["agent"]["active"],
+                "runtime": build_agent_runtime_info(repo_root, config),
                 "log_path": str(resolve_path(repo_root, config["paths"]["logs_root"]) / f"agent-{scenario_key}-{utc_now_compact()}.log"),
                 "command": [],
                 "pid": None,
@@ -426,8 +461,10 @@ def main() -> int:
             result_payload = read_json(Path(state["result_json"]))
             success = detect_build_success(result_payload, config["scheduler"]["success_values"])
             state["status"] = "completed" if success else "agent_finished_waiting_review"
+            state["runtime_ended_at"] = now_local_iso()
         else:
             state["status"] = "agent_exited_without_result"
+            state["runtime_ended_at"] = now_local_iso()
         state["updated_at"] = now_local_iso()
         update_runtime_state(state_file, state, logger)
 

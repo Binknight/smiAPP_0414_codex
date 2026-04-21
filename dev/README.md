@@ -20,6 +20,7 @@
 ## 当前流程
 
 1. 执行 `python dev/scripts/run_pipeline.py --input <scenario.json>`
+   启动前会自动清空并重建 `dev/logs`、`dev/mock-data`、`dev/spec`、`dev/state`。
 2. 脚本读取场景 JSON 中的 `app` 字段，映射到配置中的基础分支。
 3. 脚本同步基础分支，并创建或切换到场景分支，例如 `prod-travel-app-scenario-001`。
 4. 脚本基于模板实例化任务，并按配置启动 Agent，例如 `codex.cmd exec --yolo -`。
@@ -60,6 +61,7 @@ python dev/scripts/run_pipeline.py --input scenario1.json --no-web
 ## 中断恢复
 
 - `run_pipeline.py` 每次运行都会在 `dev/state/` 下写入 `*.runtime.json`
+- `run_pipeline.py` 启动前会先清理 `dev/logs`、`dev/mock-data`、`dev/spec`、`dev/state`，因此 `--resume` 只适用于同一次运行生命周期内的状态复用，不适用于重新执行脚本后的历史状态恢复
 - 如果 Agent 进程仍在运行，再次执行会提示并复用已有状态
 - 如果场景已完成或已推送，会直接提示结果并退出
 - 如果进程已退出但结果 JSON 未产出，状态会被标记为异常结束，可使用 `--force-retry` 重新下发
@@ -107,7 +109,7 @@ python dev/scripts/monitor_results.py --loop
   "buildStatus": "success",
   "artifactPath": "entry/build/default/outputs/default/entry-default-signed.hap",
   "artifactSizeBytes": 1234567,
-  "buildTime": "2026-04-17T10:30:00+08:00",
+  "buildTime": "2026-04-17 10:30:00",
   "scenarioBranch": "prod-travel-app-scenario-001",
   "appType": "travel"
 }
