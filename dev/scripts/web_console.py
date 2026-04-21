@@ -17,6 +17,7 @@ from urllib.parse import urlparse
 
 from common import (
     configure_stdio,
+    detect_build_success,
     format_display_time,
     ensure_dir,
     is_process_running,
@@ -29,6 +30,9 @@ from common import (
     windows_subprocess_kwargs,
 )
 from pipeline_monitor_lib import handle_state_file, run_loop
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+SUCCESS_STATUSES = {"pushed", "completed", "dry_run_success_detected"}
 
 
 def parse_args() -> argparse.Namespace:
@@ -59,9 +63,81 @@ def find_available_port(host: str, starting_port: int, attempts: int = 20) -> in
 
 
 def read_log_content(path: Path) -> str:
-    if not path.exists():
+    if not path.exists() or not path.is_file():
         return ""
     return path.read_text(encoding="utf-8", errors="replace")
+
+
+def extract_hap_paths_from_log(content: str) -> list[str]:
+    if not content:
+        return []
+    patterns = [
+        r"(?i)([A-Z]:\\[^\r\n\"'<>|?*]+?\.hap)",
+        r"(?i)\b((?:\.\.?[\\/])?entry[\\/][^\r\n\"']+?\.hap)\b",
+    ]
+    matches: list[str] = []
+    seen: set[str] = set()
+    for pattern in patterns:
+        for match in re.finditer(pattern, content):
+            candidate = match.group(1).strip()
+            normalized = candidate.lower()
+            if normalized in seen:
+                continue
+            seen.add(normalized)
+            matches.append(candidate)
+    return matches
+
+
+def resolve_hap_path(path_value: str | None) -> Path | None:
+    if not path_value:
+        return None
+    candidate = Path(path_value.strip())
+    if candidate.is_absolute():
+        return candidate.resolve()
+    return (REPO_ROOT / candidate).resolve()
+
+
+def build_artifact_payload(state: dict[str, Any], result_payload: dict[str, Any] | None) -> dict[str, Any] | None:
+    success = state.get("status") in SUCCESS_STATUSES
+    if not success and result_payload:
+        success = detect_build_success(result_payload, ["success", "succeeded", "ok", "passed", "true"])
+    if not success:
+        return None
+
+    candidates: list[str] = []
+    artifact_path = None if not result_payload else result_payload.get("artifactPath") or result_payload.get("artifact_path")
+    if artifact_path:
+        candidates.append(str(artifact_path))
+
+    log_paths = [
+        Path(str(state.get("agent", {}).get("log_path") or "")),
+        Path(str(state.get("log_file") or "")),
+    ]
+    for log_path in log_paths:
+        candidates.extend(extract_hap_paths_from_log(read_log_content(log_path)))
+
+    seen: set[str] = set()
+    for candidate in candidates:
+        resolved = resolve_hap_path(candidate)
+        if resolved is None:
+            continue
+        resolved_key = str(resolved).lower()
+        if resolved_key in seen:
+            continue
+        seen.add(resolved_key)
+        try:
+            resolved.relative_to(REPO_ROOT)
+        except ValueError:
+            continue
+        if not resolved.exists() or resolved.suffix.lower() != ".hap":
+            continue
+        return {
+            "path": str(resolved),
+            "name": resolved.name,
+            "sizeBytes": resolved.stat().st_size,
+            "downloadUrl": "/api/task/current/artifact",
+        }
+    return None
 
 
 def extract_session_id_from_agent_log(log_path: str | None) -> str | None:
@@ -253,6 +329,7 @@ def build_task_payload(state_file: Path) -> dict[str, Any]:
     result_payload = state.get("result_payload")
     if result_payload is None and result_json.exists():
         result_payload = read_json(result_json)
+    artifact = build_artifact_payload(state, result_payload)
     agent_runtime = build_agent_runtime_payload(state)
     runtime_started_at = state.get("runtime_started_at") or state.get("created_at")
     runtime_ended_at = state.get("runtime_ended_at")
@@ -288,6 +365,7 @@ def build_task_payload(state_file: Path) -> dict[str, Any]:
         "resultJson": state.get("result_json"),
         "resultExists": result_json.exists(),
         "resultPayload": result_payload,
+        "artifact": artifact,
         "agent": {
             "type": state.get("agent", {}).get("type"),
             "pid": state.get("agent", {}).get("pid"),
@@ -348,6 +426,20 @@ class ConsoleHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(content)
 
+    def _send_download_file(self, path: Path) -> None:
+        if not path.exists():
+            self.send_error(HTTPStatus.NOT_FOUND)
+            return
+        content = path.read_bytes()
+        content_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(content)))
+        self.send_header("Content-Disposition", f'attachment; filename="{path.name}"')
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(content)
+
     def do_GET(self) -> None:
         parsed = urlparse(self.path)
         if parsed.path == "/api/task/current":
@@ -364,6 +456,21 @@ class ConsoleHandler(BaseHTTPRequestHandler):
                 "agentLog": read_log_content(Path(state.get("agent", {}).get("log_path", ""))),
             }
             self._send_json(payload)
+            return
+        if parsed.path == "/api/task/current/artifact":
+            task = build_task_payload(self.server.state_file)
+            artifact = task.get("artifact") or {}
+            path_value = artifact.get("path")
+            artifact_path = resolve_hap_path(str(path_value)) if path_value else None
+            if artifact_path is None:
+                self.send_error(HTTPStatus.NOT_FOUND)
+                return
+            try:
+                artifact_path.relative_to(REPO_ROOT)
+            except ValueError:
+                self.send_error(HTTPStatus.FORBIDDEN)
+                return
+            self._send_download_file(artifact_path)
             return
 
         static_path = self.server.static_root / parsed.path.lstrip("/")

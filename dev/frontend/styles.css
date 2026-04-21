@@ -87,6 +87,13 @@ body {
   min-width: 0;
 }
 
+.hero-title-row {
+  display: flex;
+  align-items: center;
+  gap: 40px;
+  min-width: 0;
+}
+
 .eyebrow {
   margin: 0 0 10px;
   color: var(--muted);
@@ -251,6 +258,55 @@ p {
   font-size: 14px;
   line-height: 1;
   transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.artifact-download-button {
+  width: 52px;
+  height: 52px;
+  flex: 0 0 52px;
+  font-weight: 700;
+  border-radius: 12px;
+  color: white;
+  text-decoration: none;
+  border-color: rgba(15, 78, 201, 0.35);
+  background: linear-gradient(135deg, var(--accent-2), var(--accent));
+  box-shadow: 0 16px 28px rgba(15, 78, 201, 0.22);
+  text-align: center;
+  padding: 5px;
+}
+
+.artifact-download-button span {
+  display: block;
+  font-size: 11px;
+  line-height: 1.1;
+  letter-spacing: 0.02em;
+}
+
+.artifact-download-button:hover {
+  color: white;
+  border-color: rgba(15, 78, 201, 0.45);
+  background: linear-gradient(135deg, #1158dd, #10a184);
+  transform: translateY(-1px);
+}
+
+.artifact-download-button:visited {
+  color: white;
+}
+
+.artifact-download-button.icon-button:hover {
+  color: white;
+  border-color: rgba(15, 78, 201, 0.45);
+  background: linear-gradient(135deg, #1158dd, #10a184);
+}
+
+.artifact-download-button.icon-button:focus-visible {
+  outline: 2px solid rgba(15, 78, 201, 0.35);
+  outline-offset: 2px;
+  background: linear-gradient(135deg, var(--accent-2), var(--accent));
+}
+
+.is-hidden {
+  display: none;
 }
 
 .icon-button:hover {
@@ -603,6 +659,11 @@ p {
   .metric-strip,
   .progress-steps {
     grid-template-columns: 1fr;
+  }
+
+  .hero-title-row {
+    align-items: flex-start;
+    flex-wrap: wrap;
   }
 }
 

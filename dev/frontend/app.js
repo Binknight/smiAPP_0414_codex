@@ -1,5 +1,6 @@
 const els = {
   title: document.getElementById("task-title"),
+  artifactDownloadButton: document.getElementById("artifact-download-button"),
   statusPill: document.getElementById("status-pill"),
   scenarioId: document.getElementById("scenario-id"),
   scenarioQuestion: document.getElementById("scenario-question"),
@@ -40,6 +41,20 @@ const BEIJING_OFFSET_MINUTES = 8 * 60;
 
 function fmt(value) {
   return value || "-";
+}
+
+function formatBytes(bytes) {
+  const value = Number(bytes);
+  if (!Number.isFinite(value) || value < 0) return "-";
+  if (value < 1024) return `${value} B`;
+  const units = ["KB", "MB", "GB", "TB"];
+  let size = value / 1024;
+  let unitIndex = 0;
+  while (size >= 1024 && unitIndex < units.length - 1) {
+    size /= 1024;
+    unitIndex += 1;
+  }
+  return `${size.toFixed(size >= 10 ? 0 : 1)} ${units[unitIndex]}`;
 }
 
 function formatDisplayTime(value) {
@@ -142,8 +157,26 @@ function classifyStatus(status) {
   return "status-running";
 }
 
+function renderArtifact(task) {
+  const artifact = task.artifact;
+  if (!artifact || !artifact.downloadUrl) {
+    els.artifactDownloadButton.classList.add("is-hidden");
+    els.artifactDownloadButton.removeAttribute("href");
+    els.artifactDownloadButton.removeAttribute("download");
+    els.artifactDownloadButton.removeAttribute("title");
+    return;
+  }
+
+  els.artifactDownloadButton.classList.remove("is-hidden");
+  els.artifactDownloadButton.href = artifact.downloadUrl;
+  els.artifactDownloadButton.setAttribute("download", artifact.name || "app.hap");
+  const meta = [artifact.name, formatBytes(artifact.sizeBytes)].filter((part) => part && part !== "-").join(" · ");
+  els.artifactDownloadButton.title = meta || "下载 HAP 安装包";
+}
+
 function renderTask(task) {
   const runtime = task.agent.runtime || {};
+  renderArtifact(task);
   els.title.textContent = task.scenarioBranch || task.scenarioKey || "当前任务";
   setText(els.statusPill, task.status);
   els.statusPill.className = `card-state ${classifyStatus(task.status)}`;
