@@ -164,7 +164,7 @@ function renderTask(task) {
   setText(els.agentSandbox, runtime.sandbox_mode);
   setText(els.agentReasoningEffort, runtime.reasoning_effort);
   setText(els.agentReasoningSummary, runtime.reasoning_summary);
-  setText(els.agentSessionId, task.agent.sessionId || runtime.session_id);
+  setText(els.agentSessionId, task.agent.sessionId || runtime.session_id || runtime.sessionId);
   setText(els.progressLabel, task.progress.label);
   setText(els.progressPercent, `${task.progress.percent || 0}%`);
   els.progressPercent.className = "card-state status-progress";

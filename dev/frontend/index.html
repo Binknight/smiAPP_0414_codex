@@ -52,86 +52,59 @@
       </section>
 
       <section class="dashboard-body">
-        <div class="main-column">
-          <section class="two-up">
-            <article class="card progress-card compact-card">
-              <div class="card-header">
-                <div>
-                  <h2>任务进度</h2>
-                  <p class="card-note">初始化到完成的水平推进轨迹</p>
-                </div>
-                <strong class="card-state" id="progress-percent">0%</strong>
-              </div>
-
-              <div class="progress-summary">
-                <div class="progress-current">
-                  <span>当前阶段</span>
-                  <strong id="progress-label">-</strong>
-                </div>
-              </div>
-
-              <div class="progress-track-shell">
-                <div class="progress-track"><div id="progress-bar"></div></div>
-              </div>
-
-              <ol class="progress-steps" id="steps"></ol>
-            </article>
-
-            <article class="card agent-card compact-card">
-              <div class="card-header">
-                <div>
-                  <h2>Agent 信息</h2>
-                  <p class="card-note">执行环境、模型参数与当前会话信息</p>
-                </div>
-                <strong class="card-state" id="agent-running-state">-</strong>
-              </div>
-              <div class="info-grid plain-grid">
-                <div class="info-cell"><span>代理</span><strong id="agent-name">-</strong></div>
-                <div class="info-cell"><span>Agent PID</span><strong id="agent-pid">-</strong></div>
-                <div class="info-cell"><span>模型</span><strong id="agent-model">-</strong></div>
-                <div class="info-cell"><span>提供商</span><strong id="agent-provider">-</strong></div>
-                <div class="info-cell"><span>审批</span><strong id="agent-approval">-</strong></div>
-                <div class="info-cell"><span>沙盒权限</span><strong id="agent-sandbox">-</strong></div>
-                <div class="info-cell"><span>推理等级</span><strong id="agent-reasoning-effort">-</strong></div>
-                <div class="info-cell"><span>推理摘要</span><strong id="agent-reasoning-summary">-</strong></div>
-                <div class="info-cell info-cell-wide"><span>会话 ID</span><strong id="agent-session-id">-</strong></div>
-              </div>
-            </article>
-          </section>
-
-          <section class="card logs-card">
+        <section class="middle-row">
+          <article class="card progress-card compact-card">
             <div class="card-header">
               <div>
-                <h2>日志区</h2>
-                <p class="card-note">流水线日志与Agent全量日志</p>
+                <h2>任务进度</h2>
+                <p class="card-note">初始化到完成的水平推进轨迹</p>
+              </div>
+              <strong class="card-state" id="progress-percent">0%</strong>
+            </div>
+
+            <div class="progress-summary">
+              <div class="progress-current">
+                <span>当前阶段</span>
+                <strong id="progress-label">-</strong>
               </div>
             </div>
 
-            <div class="logs-grid">
-              <article class="log-panel">
-                <div class="log-head">
-                  <h3>流水线日志</h3>
-                </div>
-                <pre id="pipeline-log">加载中...</pre>
-              </article>
-              <article class="log-panel">
-                <div class="log-head">
-                  <h3>Agent 日志</h3>
-                </div>
-                <pre id="agent-log">加载中...</pre>
-              </article>
+            <div class="progress-track-shell">
+              <div class="progress-track"><div id="progress-bar"></div></div>
             </div>
-          </section>
-        </div>
 
-        <aside class="card control-card danger">
-          <div class="card-header">
-            <div>
-              <h2>任务控制</h2>
-              <p class="card-note">巡检态势与终止控制</p>
+            <ol class="progress-steps" id="steps"></ol>
+          </article>
+
+          <article class="card agent-card compact-card">
+            <div class="card-header">
+              <div>
+                <h2>Agent 信息</h2>
+                <p class="card-note">执行环境、模型参数与当前会话信息</p>
+              </div>
+              <strong class="card-state" id="agent-running-state">-</strong>
             </div>
-            <strong class="card-state" id="inspection-status">-</strong>
-          </div>
+            <div class="info-grid plain-grid">
+              <div class="info-cell"><span>代理</span><strong id="agent-name">-</strong></div>
+              <div class="info-cell"><span>Agent PID</span><strong id="agent-pid">-</strong></div>
+              <div class="info-cell"><span>模型</span><strong id="agent-model">-</strong></div>
+              <div class="info-cell"><span>提供商</span><strong id="agent-provider">-</strong></div>
+              <div class="info-cell"><span>审批</span><strong id="agent-approval">-</strong></div>
+              <div class="info-cell"><span>沙盒权限</span><strong id="agent-sandbox">-</strong></div>
+              <div class="info-cell"><span>推理等级</span><strong id="agent-reasoning-effort">-</strong></div>
+              <div class="info-cell"><span>推理摘要</span><strong id="agent-reasoning-summary">-</strong></div>
+              <div class="info-cell info-cell-wide"><span>会话 ID</span><strong id="agent-session-id">-</strong></div>
+            </div>
+          </article>
+
+          <aside class="card control-card danger">
+            <div class="card-header">
+              <div>
+                <h2>任务控制</h2>
+                <p class="card-note">巡检态势与终止控制</p>
+              </div>
+              <strong class="card-state" id="inspection-status">-</strong>
+            </div>
 
             <div class="info-grid plain-grid control-meta">
               <div class="info-cell info-cell-wide"><span>运行时长</span><strong id="runtime-duration">-</strong></div>
@@ -141,12 +114,37 @@
               <div class="info-cell info-cell-wide"><span>巡检说明</span><strong id="inspection-message">-</strong></div>
             </div>
 
-          <div class="control-actions">
-            <button id="terminate-button" type="button">终止任务</button>
-            <button id="shutdown-console-button" class="secondary-button" type="button">关闭控制台</button>
-            <p class="action-hint" id="terminate-hint"></p>
+            <div class="control-actions">
+              <button id="terminate-button" type="button">终止任务</button>
+              <button id="shutdown-console-button" class="secondary-button" type="button">关闭控制台</button>
+              <p class="action-hint" id="terminate-hint"></p>
+            </div>
+          </aside>
+        </section>
+
+        <section class="card logs-card">
+          <div class="card-header">
+            <div>
+              <h2>日志区</h2>
+              <p class="card-note">流水线日志与 Agent 全量日志</p>
+            </div>
           </div>
-        </aside>
+
+          <div class="logs-grid">
+            <article class="log-panel">
+              <div class="log-head">
+                <h3>流水线日志</h3>
+              </div>
+              <pre id="pipeline-log">加载中...</pre>
+            </article>
+            <article class="log-panel">
+              <div class="log-head">
+                <h3>Agent 日志</h3>
+              </div>
+              <pre id="agent-log">加载中...</pre>
+            </article>
+          </div>
+        </section>
       </section>
     </main>
 

@@ -4,6 +4,7 @@ import argparse
 import json
 import mimetypes
 import os
+import re
 import signal
 import socket
 import subprocess
@@ -61,6 +62,23 @@ def read_log_content(path: Path) -> str:
     if not path.exists():
         return ""
     return path.read_text(encoding="utf-8", errors="replace")
+
+
+def extract_session_id_from_agent_log(log_path: str | None) -> str | None:
+    if not log_path:
+        return None
+    path = Path(log_path)
+    if not path.exists():
+        return None
+    try:
+        with path.open("r", encoding="utf-8", errors="replace") as handle:
+            for _, line in zip(range(40), handle):
+                match = re.search(r"session id:\s*([A-Za-z0-9-]+)", line, re.IGNORECASE)
+                if match:
+                    return match.group(1)
+    except OSError:
+        return None
+    return None
 
 
 def terminate_pid(pid: int) -> bool:
@@ -208,6 +226,7 @@ def build_agent_runtime_payload(state: dict[str, Any]) -> dict[str, Any]:
         or runtime.get("sessionId")
         or agent_state.get("session_id")
         or agent_state.get("sessionId")
+        or extract_session_id_from_agent_log(agent_state.get("log_path"))
         or os.environ.get("CODEX_SESSION_ID")
         or os.environ.get("OPENAI_SESSION_ID")
     )
@@ -221,6 +240,7 @@ def build_agent_runtime_payload(state: dict[str, Any]) -> dict[str, Any]:
     runtime.setdefault("reasoning_summary", os.environ.get("CODEX_REASONING_SUMMARY", "none"))
     if session_id:
         runtime["session_id"] = session_id
+        runtime["sessionId"] = session_id
     return runtime
 
 
