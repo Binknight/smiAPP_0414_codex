@@ -1,2 +1,0 @@
-C:/Users/ttelab/commApp/simApp-main/smiAPP_0414_codex/entry/build/default/cache/default/default@CompileArkTS/esmodule/debug/entry/src/main/ets/entryability/EntryAbility.ts;com.hauwei.arkUIdemo/entry/ets/entryability/EntryAbility;esm;entry|entry|1.0.0|src/main/ets/entryability/EntryAbility.ts;entry;false;ets
-C:/Users/ttelab/commApp/simApp-main/smiAPP_0414_codex/entry/build/default/cache/default/default@CompileArkTS/esmodule/debug/entry/src/main/ets/pages/Index.ts;com.hauwei.arkUIdemo/entry/ets/pages/Index;esm;entry|entry|1.0.0|src/main/ets/pages/Index.ts;entry;false;ets
