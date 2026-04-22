@@ -8,34 +8,34 @@ A simple HarmonyOS ArkUI (ArkTS) sample app with:
 
 ## Files
 
-- `AppScope/app.json5`: app-level metadata
-- `entry/src/main/ets/pages/Index.ets`: main ArkUI page
-- `entry/src/main/ets/entryability/EntryAbility.ets`: entry ability
-- `entry/src/main/module.json5`: module config
+- `baseApp/AppScope/app.json5`: app-level metadata
+- `baseApp/entry/src/main/ets/pages/Index.ets`: main ArkUI page
+- `baseApp/entry/src/main/ets/entryability/EntryAbility.ets`: entry ability
+- `baseApp/entry/src/main/module.json5`: module config
 
 ## Run
 
-1. Open `HarmonyArkUIDemo` in DevEco Studio.
-2. Add or replace the signing files under `AppScope`:
+1. Open the `baseApp` directory in DevEco Studio.
+2. Add or replace the signing files under `baseApp/AppScope`:
    - `debug.p12`
    - `debug.cer`
    - `debug.p7b`
-3. If your SDK version is not `5.0.0(12)`, update the root `build-profile.json5`.
+3. If your SDK version is not `5.0.0(12)`, update `baseApp/build-profile.json5`.
 4. Run on an emulator or device.
 
 ## Build Script
 
-- Command line: `powershell -ExecutionPolicy Bypass -File .\build.ps1`
-- Double click: `build.bat`
-- Clean build: `powershell -ExecutionPolicy Bypass -File .\build.ps1 -Clean`
-- Release mode: `powershell -ExecutionPolicy Bypass -File .\build.ps1 -BuildMode release`
+- Command line: `powershell -ExecutionPolicy Bypass -File .\build\build.ps1`
+- Double click: `build\build.bat`
+- Clean build: `powershell -ExecutionPolicy Bypass -File .\build\build.ps1 -Clean`
+- Release mode: `powershell -ExecutionPolicy Bypass -File .\build\build.ps1 -BuildMode release`
 
 The script automatically:
 
 - uses DevEco Studio's bundled JDK
 - creates the local `.deveco-sdk` compatibility mapping
 - runs `hvigor assembleHap`
-- writes HAP outputs to `entry\build\default\outputs\default`
+- writes HAP outputs to `baseApp\entry\build\default\outputs\default`
 
 ## Next steps
 

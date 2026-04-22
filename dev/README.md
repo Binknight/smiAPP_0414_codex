@@ -107,7 +107,7 @@ python dev/scripts/monitor_results.py --loop
 ```json
 {
   "buildStatus": "success",
-  "artifactPath": "entry/build/default/outputs/default/entry-default-signed.hap",
+  "artifactPath": "baseApp/entry/build/default/outputs/default/entry-default-signed.hap",
   "artifactSizeBytes": 1234567,
   "buildTime": "2026-04-17 10:30:00",
   "scenarioBranch": "prod-travel-app-scenario-001",
