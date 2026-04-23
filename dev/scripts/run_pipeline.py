@@ -197,18 +197,42 @@ def build_prompt_variables(
     }
 
 
-def summarize_agent_command(command: list[str]) -> str:
-    if len(command) >= 4 and command[:4] == ["codex.cmd", "exec", "--yolo", "-"]:
-        return "codex.cmd exec --yolo - < stdin(taskPrompt)"
+def _truncate_log_command(command: list[str], last_arg_max: int = 200) -> str:
+    if not command:
+        return ""
+    if len(command[-1]) > last_arg_max:
+        last = f"{command[-1][:last_arg_max]}...（共 {len(command[-1])} 字）"
+        return format_command([*command[:-1], last])
     return format_command(command)
+
+
+def summarize_agent_command(command: list[str], task_via_stdin: bool) -> str:
+    if task_via_stdin and len(command) >= 4 and command[:4] == ["codex.cmd", "exec", "--yolo", "-"]:
+        return "codex.cmd exec --yolo - < stdin(taskPrompt)"
+    if not task_via_stdin:
+        return f"（任务在 argv 中，不写入 stdin）\n{_truncate_log_command(command)}"
+    return _truncate_log_command(command)
 
 
 def build_agent_runtime_info(repo_root: Path, config: dict[str, Any]) -> dict[str, Any]:
     agent_key = config["agent"]["active"]
     agent_definition = config["agent"]["definitions"].get(agent_key, {})
+    name = str(agent_definition.get("display_name", agent_key)).replace("_", " ").lower()
+    base = {"workspace": str(repo_root), "name": name}
+    family = (agent_definition.get("runtime_family") or "").lower()
+    if family == "opencode":
+        return {
+            **base,
+            "model": os.environ.get("OPENCODE_MODEL", "（opencode 默认/配置）"),
+            "provider": os.environ.get("OPENCODE_PROVIDER", "（models.dev / 已登录提供商）"),
+            "approval_policy": os.environ.get("OPENCODE_PERMISSION", "见 OPENCODE_PERMISSION"),
+            "sandbox_mode": "opencode 内置工具权限",
+            "reasoning_effort": os.environ.get("OPENCODE_REASONING_EFFORT", "—"),
+            "reasoning_summary": os.environ.get("OPENCODE_REASONING_SUMMARY", "—"),
+            "session_id": os.environ.get("OPENCODE_SESSION_ID"),
+        }
     return {
-        "workspace": str(repo_root),
-        "name": str(agent_definition.get("display_name", agent_key)).replace("_", " ").lower(),
+        **base,
         "model": os.environ.get("CODEX_MODEL", "gpt-5.4"),
         "provider": os.environ.get("CODEX_PROVIDER", "openai"),
         "approval_policy": os.environ.get("CODEX_APPROVAL_POLICY", "never"),
@@ -240,8 +264,9 @@ def dispatch_agent(
     extra_env: dict[str, str],
     logger: Any,
     dry_run: bool,
+    task_via_stdin: bool = True,
 ) -> dict[str, Any]:
-    logger.info("即将下发 Agent 任务: %s", summarize_agent_command(agent_command))
+    logger.info("即将下发 Agent 任务: %s", summarize_agent_command(agent_command, task_via_stdin=task_via_stdin))
     if dry_run:
         state["status"] = "dry_run"
         state["agent"] = {
@@ -257,18 +282,19 @@ def dispatch_agent(
     handle = agent_log_path.open("a", encoding="utf-8")
     env = os.environ.copy()
     env.update(extra_env)
+    stdin = subprocess.PIPE if task_via_stdin else subprocess.DEVNULL
     process = subprocess.Popen(
         agent_command,
         cwd=str(repo_root),
         stdout=handle,
         stderr=subprocess.STDOUT,
-        stdin=subprocess.PIPE,
+        stdin=stdin,
         text=True,
         encoding="utf-8",
         errors="replace",
         env=env,
     )
-    if process.stdin is not None:
+    if task_via_stdin and process.stdin is not None:
         process.stdin.write(task_prompt)
         process.stdin.close()
     handle.close()
@@ -475,13 +501,24 @@ def main() -> int:
     update_runtime_state(state_file, state, logger)
 
     agent_definition = config["agent"]["definitions"][config["agent"]["active"]]
+    task_via_stdin = bool(agent_definition.get("task_via_stdin", True))
     agent_command, extra_env = instantiate_agent_command(agent_definition, task_prompt)
-    state = dispatch_agent(repo_root, state, agent_command, task_prompt, extra_env, logger, args.dry_run)
+    state = dispatch_agent(
+        repo_root,
+        state,
+        agent_command,
+        task_prompt,
+        extra_env,
+        logger,
+        args.dry_run,
+        task_via_stdin=task_via_stdin,
+    )
     state["updated_at"] = now_local_iso()
     update_runtime_state(state_file, state, logger)
 
     if not args.no_web:
         start_web_console(repo_root, config_path, scenario_dir_name, logger, args.dry_run)
+        logger.info("Web 控制台已启动，访问地址: http://127.0.0.1:8765")
 
     if args.wait and not args.dry_run:
         try:

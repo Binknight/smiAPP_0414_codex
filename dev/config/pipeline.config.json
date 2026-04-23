@@ -17,7 +17,7 @@
       "generic": {
         "display_name": "通用类APP",
         "aliases": ["generic", "common", "main", "general"],
-        "base_branch": "main",
+        "base_branch": "main-refact",
         "app_segment": "generic"
       },
       "explore": {
@@ -35,12 +35,23 @@
     }
   },
   "agent": {
-    "active": "codex_cli",
+    "active": "opencode_cli",
     "definitions": {
       "codex_cli": {
         "display_name": "Codex CLI",
         "command": ["codex.cmd", "exec", "--yolo", "-"],
         "env": {},
+        "task_via_stdin": true,
+        "runtime_family": "codex",
+        "supports_resume": false
+      },
+      "opencode_cli": {
+        "display_name": "OpenCode CLI",
+        "command": ["opencode", "run", "{{TASK_PROMPT}}"
+        ],
+        "env": {},
+        "task_via_stdin": false,
+        "runtime_family": "opencode",
         "supports_resume": false
       }
     }

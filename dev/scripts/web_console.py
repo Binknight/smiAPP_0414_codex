@@ -276,9 +276,11 @@ def build_agent_runtime_payload(state: dict[str, Any] | None) -> dict[str, Any]:
         or extract_session_id_from_agent_log(agent_state.get("log_path"))
         or os.environ.get("CODEX_SESSION_ID")
         or os.environ.get("OPENAI_SESSION_ID")
+        or os.environ.get("OPENCODE_SESSION_ID")
     )
     runtime.setdefault("workspace", str(REPO_ROOT))
-    runtime.setdefault("name", "codex cli")
+    _atype = (agent_state.get("type") or "codex_cli") if (state) else "codex_cli"
+    runtime.setdefault("name", str(_atype).replace("_", " ").lower())
     runtime.setdefault("model", os.environ.get("CODEX_MODEL", "gpt-5.4"))
     runtime.setdefault("provider", os.environ.get("CODEX_PROVIDER", "openai"))
     runtime.setdefault("approval_policy", os.environ.get("CODEX_APPROVAL_POLICY", "never"))
