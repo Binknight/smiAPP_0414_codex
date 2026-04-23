@@ -17,7 +17,7 @@
       "generic": {
         "display_name": "通用类APP",
         "aliases": ["generic", "common", "main", "general"],
-        "base_branch": "main-refact",
+        "base_branch": "main-refactor",
         "app_segment": "generic"
       },
       "explore": {
