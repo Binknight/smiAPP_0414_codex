@@ -47,10 +47,9 @@
       },
       "opencode_cli": {
         "display_name": "OpenCode CLI",
-        "command": ["opencode", "run", "{{TASK_PROMPT}}"
-        ],
+        "command": ["opencode.cmd", "run", "--dangerously-skip-permissions"],
         "env": {},
-        "task_via_stdin": false,
+        "task_via_stdin": true,
         "runtime_family": "opencode",
         "supports_resume": false
       }

@@ -9,6 +9,7 @@ import signal
 import socket
 import subprocess
 import threading
+import time
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -25,6 +26,7 @@ from common import (
     now_local_iso,
     read_json,
     resolve_path,
+    setup_logger,
     setup_stream_logger,
     update_runtime_state,
     windows_subprocess_kwargs,
@@ -41,6 +43,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--selected", default="baseApp", help="默认选中的 pipeline")
     parser.add_argument("--host", default="127.0.0.1", help="Web 服务监听地址")
     parser.add_argument("--port", type=int, default=8765, help="Web 服务监听端口")
+    parser.add_argument(
+        "--log-file",
+        default=None,
+        help="将 Web 服务日志写入该文件（子进程/无控制台时便于排错）",
+    )
     parser.add_argument("--dry-run", action="store_true", help="巡检使用 dry-run 模式")
     return parser.parse_args()
 
@@ -49,8 +56,11 @@ def load_config(config_path: Path) -> dict[str, Any]:
     return read_json(config_path)
 
 
-def prepare_web_logger() -> Any:
-    return setup_stream_logger("dev-web-console")
+def prepare_web_logger(log_path: Path | None) -> Any:
+    if log_path is None:
+        return setup_stream_logger("dev-web-console")
+    ensure_dir(log_path.parent)
+    return setup_logger("dev-web-console", log_path)
 
 
 def find_available_port(host: str, starting_port: int, attempts: int = 20) -> int:
@@ -652,7 +662,17 @@ class ConsoleHandler(BaseHTTPRequestHandler):
             mark_web_stopped(context["state_file"], self.server.logger)
             self._send_json({"ok": True, "message": "console_shutting_down"})
             self.server.stop_event.set()
-            threading.Thread(target=self.server.shutdown, daemon=True).start()
+            try:
+                self.wfile.flush()
+            except OSError:
+                pass
+
+            def _exit_after_response() -> None:
+                time.sleep(0.25)
+                os._exit(0)
+
+            # ThreadingHTTPServer.shutdown()+serve_forever 在部分 Windows 环境无法可靠收束主线程，进程仍挂起
+            threading.Thread(target=_exit_after_response, name="dev-web-exit", daemon=True).start()
             return
 
         self.send_error(HTTPStatus.NOT_FOUND)
@@ -713,7 +733,8 @@ def main() -> int:
     config_path = Path(args.config).resolve()
     config = load_config(config_path)
     repo_root = resolve_path(config_path.parent.parent.parent, config["paths"]["repo_root"])
-    logger = prepare_web_logger()
+    log_path: Path | None = Path(args.log_file).resolve() if args.log_file else None
+    logger = prepare_web_logger(log_path)
     host = args.host
     port = find_available_port(host, args.port)
     static_root = ensure_dir(repo_root / "dev" / "frontend")

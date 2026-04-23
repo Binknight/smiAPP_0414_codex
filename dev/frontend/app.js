@@ -324,9 +324,12 @@ els.shutdownConsoleButton.addEventListener("click", async () => {
   if (!confirmed) return;
   els.shutdownConsoleButton.disabled = true;
   try {
-    const payload = await fetchJson("/api/console/shutdown");
+    // 与 terminate 一样必须为 POST，否则走 GET 会得到 404，页面无法进入“已关闭”状态
+    const payload = await fetchJson("/api/console/shutdown", { method: "POST" });
     els.terminateHint.textContent = payload.ok ? "控制台正在关闭。" : "关闭控制台失败。";
     window.setTimeout(() => {
+      window.clearInterval(refreshAllIntervalId);
+      window.clearInterval(refreshRuntimeIntervalId);
       document.body.innerHTML = "<main class=\"shell\"><section class=\"card hero-card\"><div><p class=\"eyebrow\">Console Closed</p><h1>控制台已关闭</h1><p class=\"card-note\">请重新执行 run_pipeline 再次启动 Web 页面。</p></div></section></main>";
     }, 500);
   } catch (error) {
@@ -336,5 +339,5 @@ els.shutdownConsoleButton.addEventListener("click", async () => {
 });
 
 refreshAll();
-window.setInterval(refreshAll, 3000);
-window.setInterval(refreshRuntimeDurationTick, 1000);
+const refreshAllIntervalId = window.setInterval(refreshAll, 3000);
+const refreshRuntimeIntervalId = window.setInterval(refreshRuntimeDurationTick, 1000);

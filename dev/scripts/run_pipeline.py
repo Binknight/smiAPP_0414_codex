@@ -94,11 +94,21 @@ def prepare_scenario_root(
         return scenario_root
 
     if scenario_root.exists():
-        shutil.rmtree(scenario_root)
+        for item in scenario_root.iterdir():
+            if item.name == "logs":
+                continue
+            try:
+                if item.is_dir():
+                    shutil.rmtree(item)
+                else:
+                    item.unlink()
+            except Exception as exc:
+                logger.warning("清理场景目录时跳过无法删除的项: %s (%s)", item, exc)
     shutil.copytree(
         base_app_root,
         scenario_root,
         ignore=shutil.ignore_patterns("build", ".hvigor", "mock-data", "output", "logs", "state", "spec"),
+        dirs_exist_ok=True,
     )
     logger.info("已基于 baseApp 初始化场景目录: %s", scenario_root)
     return scenario_root
@@ -310,6 +320,20 @@ def dispatch_agent(
     return state
 
 
+def wait_log_web_url(state_file: Path, logger: Any, max_wait_sec: float = 5.0) -> str | None:
+    """等待 dev-web 在状态文件中写入 web.url（子进程在绑定端口后才会更新）。"""
+    deadline = time.time() + max_wait_sec
+    while time.time() < deadline:
+        time.sleep(0.2)
+        state = load_runtime_state(state_file)
+        if not state:
+            continue
+        url = (state.get("web") or {}).get("url")
+        if url:
+            return str(url)
+    return None
+
+
 def start_web_console(
     repo_root: Path,
     config_path: Path,
@@ -317,6 +341,8 @@ def start_web_console(
     logger: Any,
     dry_run: bool,
 ) -> None:
+    scenario_logs = ensure_dir(repo_root / "scenarios" / pipeline_key / "logs")
+    web_log = scenario_logs / "web-console.log"
     command = [
         sys.executable,
         str((repo_root / "dev" / "scripts" / "web_console.py").resolve()),
@@ -328,6 +354,8 @@ def start_web_console(
         "127.0.0.1",
         "--port",
         "8765",
+        "--log-file",
+        str(web_log),
     ]
     if dry_run:
         command.append("--dry-run")
@@ -346,7 +374,7 @@ def start_web_console(
         creationflags=creationflags,
         close_fds=True,
     )
-    logger.info("Web 控制台启动命令已下发，默认选中: %s", pipeline_key)
+    logger.info("Web 控制台启动命令已下发，默认选中: %s，日志: %s", pipeline_key, web_log)
 
 
 def wait_for_agent_result(
@@ -518,7 +546,16 @@ def main() -> int:
 
     if not args.no_web:
         start_web_console(repo_root, config_path, scenario_dir_name, logger, args.dry_run)
-        logger.info("Web 控制台已启动，访问地址: http://127.0.0.1:8765")
+        web_url = wait_log_web_url(state_file, logger)
+        if web_url:
+            logger.info("Web 控制台已就绪，访问地址: %s", web_url)
+        else:
+            web_log = repo_root / "scenarios" / scenario_dir_name / "logs" / "web-console.log"
+            logger.warning(
+                "Web 子进程在数秒内未把访问地址写入状态文件。请打开日志排查: %s 或见 %s 中的 web 字段。",
+                web_log,
+                state_file,
+            )
 
     if args.wait and not args.dry_run:
         try:
