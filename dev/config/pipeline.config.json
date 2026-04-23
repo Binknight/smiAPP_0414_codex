@@ -47,9 +47,17 @@
       },
       "opencode_cli": {
         "display_name": "OpenCode CLI",
-        "command": ["opencode.cmd", "run", "--dangerously-skip-permissions"],
+        "command": [
+          "opencode.cmd",
+          "run",
+          "--model",
+          "{{OPENCODE_MODEL}}",
+          "请阅读并完整执行 -f 附加文件中的任务说明。",
+          "-f",
+          "{{TASK_PROMPT_FILE}}"
+        ],
         "env": {},
-        "task_via_stdin": true,
+        "task_via_stdin": false,
         "runtime_family": "opencode",
         "supports_resume": false
       }

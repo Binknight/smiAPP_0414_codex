@@ -190,6 +190,8 @@ def build_prompt_variables(
     build_command: str,
     build_target: str,
 ) -> dict[str, str]:
+    task_prompt_file = (runtime_paths["spec_dir"] / "task_prompt.txt").resolve()
+    opencode_model = os.environ.get("OPENCODE_MODEL", "mlops/qwen35-35b-vl")
     return {
         "INPUT_JSON_PATH": str(input_path),
         "INPUT_JSON_CONTENT": json.dumps(scenario_payload, ensure_ascii=False, indent=2),
@@ -204,6 +206,8 @@ def build_prompt_variables(
         "RESULT_JSON_PATH": str(runtime_paths["result_json"]),
         "BUILD_TARGET": build_target,
         "BUILD_COMMAND": f"{build_command} -Target {build_target}",
+        "TASK_PROMPT_FILE": str(task_prompt_file),
+        "OPENCODE_MODEL": opencode_model,
     }
 
 
@@ -233,7 +237,7 @@ def build_agent_runtime_info(repo_root: Path, config: dict[str, Any]) -> dict[st
     if family == "opencode":
         return {
             **base,
-            "model": os.environ.get("OPENCODE_MODEL", "（opencode 默认/配置）"),
+            "model": os.environ.get("OPENCODE_MODEL", "mlops/qwen35-35b-vl"),
             "provider": os.environ.get("OPENCODE_PROVIDER", "（models.dev / 已登录提供商）"),
             "approval_policy": os.environ.get("OPENCODE_PERMISSION", "见 OPENCODE_PERMISSION"),
             "sandbox_mode": "opencode 内置工具权限",
@@ -256,8 +260,11 @@ def build_agent_runtime_info(repo_root: Path, config: dict[str, Any]) -> dict[st
 def instantiate_agent_command(
     agent_definition: dict[str, Any],
     task_prompt: str,
+    extra_template: dict[str, str] | None = None,
 ) -> tuple[list[str], dict[str, str]]:
-    variables = {"TASK_PROMPT": task_prompt}
+    variables: dict[str, str] = {"TASK_PROMPT": task_prompt}
+    if extra_template:
+        variables.update(extra_template)
     command = [render_template(str(part), variables) for part in agent_definition["command"]]
     env = {
         key: render_template(str(value), variables)
@@ -531,7 +538,7 @@ def main() -> int:
 
     agent_definition = config["agent"]["definitions"][config["agent"]["active"]]
     task_via_stdin = bool(agent_definition.get("task_via_stdin", True))
-    agent_command, extra_env = instantiate_agent_command(agent_definition, task_prompt)
+    agent_command, extra_env = instantiate_agent_command(agent_definition, task_prompt, prompt_variables)
     state = dispatch_agent(
         repo_root,
         state,
