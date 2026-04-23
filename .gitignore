@@ -18,3 +18,5 @@ __pycache__/
 *.pyc
 .codex-ssh
 tmp/
+# 场景子目录内流水线日志；自动提交会 git add 整个 scenario 树，用忽略规则排除日志
+scenarios/**/logs/
