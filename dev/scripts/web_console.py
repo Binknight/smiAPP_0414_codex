@@ -309,6 +309,13 @@ def get_pipeline_roots(repo_root: Path, config: dict[str, Any]) -> tuple[Path, P
     return base_app_root, scenarios_root
 
 
+def scenario_target_build(config: dict[str, Any], scenario_name: str) -> str:
+    """config 中 scenarios 根路径的 POSIX 形式，供 targetBuild / build_artifact 使用。
+    单独函数是为了避免在 f-string 表达式里写 .replace('\\\\', '/')（部分 Python 版本会 SyntaxError）。"""
+    root = str(config["paths"]["scenarios_root"]).replace("\\", "/")
+    return f"{root}/{scenario_name}"
+
+
 def get_state_file_for_pipeline(pipeline_root: Path) -> Path | None:
     state_file = pipeline_root / "state" / "runtime.json"
     return state_file if state_file.exists() else None
@@ -338,18 +345,19 @@ def list_pipeline_summaries(repo_root: Path, config: dict[str, Any]) -> list[dic
             continue
         state_file = get_state_file_for_pipeline(scenario_root)
         state = load_runtime_state(state_file) if state_file else None
+        tb = scenario_target_build(config, scenario_root.name)
         items.append(
             {
                 "key": scenario_root.name,
                 "name": scenario_root.name,
                 "type": "scenario",
-                "targetBuild": f"{config['paths']['scenarios_root'].replace('\\', '/')}/{scenario_root.name}",
+                "targetBuild": tb,
                 "root": str(scenario_root),
                 "status": (state or {}).get("status") or "idle",
                 "branchName": (state or {}).get("branch_name") or (state or {}).get("base_branch"),
                 "updatedAt": format_display_time((state or {}).get("updated_at")),
                 "hasState": bool(state),
-                "hasArtifact": bool(build_artifact_payload(f"{config['paths']['scenarios_root'].replace('\\', '/')}/{scenario_root.name}", state, (state or {}).get("result_payload"), scenario_root.name)),
+                "hasArtifact": bool(build_artifact_payload(tb, state, (state or {}).get("result_payload"), scenario_root.name)),
             }
         )
     return items
@@ -375,7 +383,7 @@ def get_pipeline_context(repo_root: Path, config: dict[str, Any], pipeline_key: 
         "name": pipeline_key,
         "type": "scenario",
         "root": scenario_root,
-        "target_build": f"{config['paths']['scenarios_root'].replace('\\', '/')}/{pipeline_key}",
+        "target_build": scenario_target_build(config, pipeline_key),
         "state_file": get_state_file_for_pipeline(scenario_root),
     }
 
