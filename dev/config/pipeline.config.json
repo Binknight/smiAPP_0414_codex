@@ -9,7 +9,7 @@
   },
   "git": {
     "remote_name": "origin",
-    "remote_url": "https://git@ssh.github.com:443/Binknight/agentic-sim-app-starter.git",
+    "remote_url": "https://github.com:443/Binknight/agentic-sim-app-starter.git",
     "default_base_branch": "main",
     "scenario_id_padding": 3,
     "fetch_all_known_branches": true,
