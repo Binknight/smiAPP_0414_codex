@@ -172,10 +172,10 @@ def render_template(template: str, variables: dict[str, str]) -> str:
 
 
 def normalize_app_key(config: dict[str, Any], raw_app: str | None) -> tuple[str, dict[str, Any]]:
-    app_types = config["git"]["app_types"]
+    app_types = config["app_types"]
     candidate = (raw_app or "").strip().lower()
     if not candidate:
-        candidate = config["git"]["default_base_branch"]
+        return "generic", app_types["generic"]
 
     for key, app_info in app_types.items():
         aliases = {key, *(alias.lower() for alias in app_info.get("aliases", []))}

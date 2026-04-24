@@ -87,14 +87,13 @@ def commit_and_push(
     dry_run: bool,
 ) -> None:
     scheduler_config = config["scheduler"]
-    remote_name = config["git"]["remote_name"]
     include_paths = build_include_paths(repo_root, state, config, logger)
-    branch_name = state.get("branch_name") or state.get("base_branch") or state.get("scenario_branch")
+    pipeline_key = state.get("pipeline_key") or state.get("scenario_key")
     commit_message = scheduler_config["commit_message_template"].format(
-        pipeline_key=state.get("pipeline_key") or state.get("scenario_key"),
+        pipeline_key=pipeline_key,
         scenario_id=state.get("scenario_id"),
         app_type=state.get("app_type"),
-        scenario_branch=branch_name,
+        scenario_branch=pipeline_key,
     )
 
     if not include_paths:
@@ -106,7 +105,6 @@ def commit_and_push(
         logger.info("dry-run mode, skip git add/commit/push.")
         return
 
-    run_command(["git", "checkout", branch_name], repo_root, logger)
     run_command(["git", "add", "--", *include_paths], repo_root, logger)
 
     status_result = run_command(["git", "status", "--short"], repo_root, logger, check=False)
@@ -114,8 +112,6 @@ def commit_and_push(
         logger.info("No staged changes detected, skip commit.")
     else:
         run_command(["git", "commit", "-m", commit_message], repo_root, logger)
-
-    run_command(["git", "push", "-u", remote_name, branch_name], repo_root, logger)
 
 
 def initialize_inspection(state: dict[str, Any]) -> dict[str, Any]:

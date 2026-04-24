@@ -304,9 +304,9 @@ def build_agent_runtime_payload(state: dict[str, Any] | None) -> dict[str, Any]:
 
 
 def get_pipeline_roots(repo_root: Path, config: dict[str, Any]) -> tuple[Path, Path]:
-    base_app_root = resolve_path(repo_root, config["paths"]["base_app_root"])
+    baseline_root = ensure_dir(resolve_path(repo_root, config["paths"]["baseline_root"]))
     scenarios_root = ensure_dir(resolve_path(repo_root, config["paths"]["scenarios_root"]))
-    return base_app_root, scenarios_root
+    return baseline_root, scenarios_root
 
 
 def scenario_target_build(config: dict[str, Any], scenario_name: str) -> str:
@@ -321,26 +321,25 @@ def get_state_file_for_pipeline(pipeline_root: Path) -> Path | None:
     return state_file if state_file.exists() else None
 
 
-def build_base_pipeline_summary(base_app_root_str: str) -> dict[str, Any]:
-    artifact = build_artifact_payload(base_app_root_str, None, None, "baseApp")
+def build_base_pipeline_summary(baseline_root_str: str) -> dict[str, Any]:
     return {
         "key": "baseApp",
         "name": "baseApp",
         "type": "baseApp",
-        "targetBuild": base_app_root_str,
-        "root": base_app_root_str,
-        "status": "ready" if artifact else "idle",
+        "targetBuild": baseline_root_str,
+        "root": baseline_root_str,
+        "status": "ready",
         "branchName": None,
         "updatedAt": format_display_time(now_local_iso()),
         "hasState": False,
-        "hasArtifact": bool(artifact),
+        "hasArtifact": False,
     }
 
 
 def list_pipeline_summaries(repo_root: Path, config: dict[str, Any]) -> list[dict[str, Any]]:
-    base_app_root, scenarios_root = get_pipeline_roots(repo_root, config)
-    base_app_root_str = config["paths"]["base_app_root"]
-    items = [build_base_pipeline_summary(base_app_root_str)]
+    baseline_root, scenarios_root = get_pipeline_roots(repo_root, config)
+    baseline_root_str = config["paths"]["baseline_root"]
+    items = [build_base_pipeline_summary(baseline_root_str)]
     for scenario_root in sorted(scenarios_root.iterdir()):
         if not scenario_root.is_dir():
             continue
@@ -355,7 +354,7 @@ def list_pipeline_summaries(repo_root: Path, config: dict[str, Any]) -> list[dic
                 "targetBuild": tb,
                 "root": str(scenario_root),
                 "status": (state or {}).get("status") or "idle",
-                "branchName": (state or {}).get("branch_name") or (state or {}).get("base_branch"),
+                "branchName": (state or {}).get("baseline_dir"),
                 "updatedAt": format_display_time((state or {}).get("updated_at")),
                 "hasState": bool(state),
                 "hasArtifact": bool(build_artifact_payload(tb, state, (state or {}).get("result_payload"), scenario_root.name)),
@@ -365,15 +364,15 @@ def list_pipeline_summaries(repo_root: Path, config: dict[str, Any]) -> list[dic
 
 
 def get_pipeline_context(repo_root: Path, config: dict[str, Any], pipeline_key: str) -> dict[str, Any]:
-    base_app_root, scenarios_root = get_pipeline_roots(repo_root, config)
-    base_app_root_str = config["paths"]["base_app_root"]
+    baseline_root, scenarios_root = get_pipeline_roots(repo_root, config)
+    baseline_root_str = config["paths"]["baseline_root"]
     if pipeline_key == "baseApp":
         return {
             "key": "baseApp",
             "name": "baseApp",
             "type": "baseApp",
-            "root": base_app_root_str,
-            "target_build": base_app_root_str,
+            "root": baseline_root_str,
+            "target_build": baseline_root_str,
             "state_file": None,
         }
 
@@ -404,8 +403,7 @@ def build_synthetic_payload(context: dict[str, Any]) -> dict[str, Any]:
         "scenarioQuestion": None,
         "appType": None,
         "appDisplayName": None,
-        "baseBranch": None,
-        "branchName": None,
+        "baselineDir": None,
         "status": "ready" if artifact else "idle",
         "createdAt": None,
         "updatedAt": format_display_time(now_local_iso()),
@@ -482,8 +480,7 @@ def build_task_payload(repo_root: Path, config: dict[str, Any], pipeline_key: st
         "scenarioQuestion": state.get("scenario_question"),
         "appType": state.get("app_type"),
         "appDisplayName": state.get("app_display_name"),
-        "baseBranch": state.get("base_branch"),
-        "branchName": state.get("branch_name") or state.get("scenario_branch"),
+        "baselineDir": state.get("baseline_dir"),
         "status": state.get("status"),
         "createdAt": format_display_time(state.get("created_at")),
         "updatedAt": format_display_time(state.get("updated_at")),

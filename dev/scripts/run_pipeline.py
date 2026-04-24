@@ -14,9 +14,7 @@ from common import (
     configure_stdio,
     detect_build_success,
     ensure_dir,
-    ensure_remote,
     format_command,
-    git_has_local_changes,
     infer_scenario_id,
     is_process_running,
     load_runtime_state,
@@ -26,7 +24,6 @@ from common import (
     read_text,
     render_template,
     resolve_path,
-    run_command,
     sanitize_name,
     setup_logger,
     update_runtime_state,
@@ -66,8 +63,12 @@ def get_repo_root(config_path: Path, config: dict[str, Any]) -> Path:
     return resolve_path(config_path.parent.parent.parent, config["paths"]["repo_root"])
 
 
-def get_base_app_root(repo_root: Path, config: dict[str, Any]) -> Path:
-    return resolve_path(repo_root, config["paths"]["base_app_root"])
+def get_app_baseline_dir(repo_root: Path, config: dict[str, Any], app_key: str) -> Path:
+    app_types = config["app_types"]
+    app_info = app_types.get(app_key)
+    if not app_info or not app_info.get("baseline_dir"):
+        raise ValueError(f"未找到 APP 类型 {app_key!r} 的 baseline_dir 配置")
+    return resolve_path(repo_root, app_info["baseline_dir"])
 
 
 def get_scenarios_root(repo_root: Path, config: dict[str, Any]) -> Path:
@@ -77,11 +78,14 @@ def get_scenarios_root(repo_root: Path, config: dict[str, Any]) -> Path:
 def prepare_scenario_root(
     repo_root: Path,
     config: dict[str, Any],
+    app_key: str,
     scenario_dir_name: str,
     logger: Any,
     dry_run: bool,
 ) -> Path:
-    base_app_root = get_base_app_root(repo_root, config)
+    baseline_dir = get_app_baseline_dir(repo_root, config, app_key)
+    if not baseline_dir.exists():
+        raise FileNotFoundError(f"基线 APP 目录不存在: {baseline_dir}")
     scenarios_root = get_scenarios_root(repo_root, config)
     scenario_root = scenarios_root / scenario_dir_name
 
@@ -105,12 +109,12 @@ def prepare_scenario_root(
             except Exception as exc:
                 logger.warning("清理场景目录时跳过无法删除的项: %s (%s)", item, exc)
     shutil.copytree(
-        base_app_root,
+        baseline_dir,
         scenario_root,
         ignore=shutil.ignore_patterns("build", ".hvigor", "mock-data", "output", "logs", "state", "spec"),
         dirs_exist_ok=True,
     )
-    logger.info("已基于 baseApp 初始化场景目录: %s", scenario_root)
+    logger.info("已基于基线 %s 初始化场景目录: %s", baseline_dir, scenario_root)
     return scenario_root
 
 
@@ -149,41 +153,11 @@ def write_task_prompt_snapshot(runtime_paths: dict[str, Path], task_prompt: str)
     return prompt_path
 
 
-def ensure_base_branch(
-    repo_root: Path,
-    config: dict[str, Any],
-    base_branch: str,
-    logger: Any,
-    dry_run: bool,
-) -> None:
-    git_config = config["git"]
-    remote_name = git_config["remote_name"]
-    app_types = git_config["app_types"]
-
-    ensure_remote(repo_root, git_config, logger)
-    if dry_run:
-        logger.info("当前为 dry-run，跳过远端抓取和分支切换。")
-        return
-
-    if git_has_local_changes(repo_root):
-        logger.warning("当前工作区存在未提交改动。若影响分支切换，请先处理后重试。")
-
-    if git_config.get("fetch_all_known_branches", False):
-        branches = sorted({app_info["base_branch"] for app_info in app_types.values()})
-        run_command(["git", "fetch", "--prune", remote_name, *branches], repo_root, logger)
-    else:
-        run_command(["git", "fetch", "--prune", remote_name, base_branch], repo_root, logger)
-
-    run_command(["git", "checkout", base_branch], repo_root, logger)
-    run_command(["git", "pull", "--ff-only", remote_name, base_branch], repo_root, logger)
-
-
 def build_prompt_variables(
     input_path: Path,
     scenario_payload: dict[str, Any],
     app_key: str,
     app_info: dict[str, Any],
-    branch_name: str,
     scenario_dir_name: str,
     scenario_root: Path,
     runtime_paths: dict[str, Path],
@@ -197,8 +171,7 @@ def build_prompt_variables(
         "INPUT_JSON_CONTENT": json.dumps(scenario_payload, ensure_ascii=False, indent=2),
         "APP_TYPE": app_key,
         "APP_DISPLAY_NAME": str(app_info.get("display_name", app_key)),
-        "BASE_BRANCH": branch_name,
-        "BRANCH_NAME": branch_name,
+        "BASELINE_DIR": app_info.get("baseline_dir", ""),
         "SCENARIO_NAME": scenario_dir_name,
         "SCENARIO_ROOT": str(scenario_root),
         "SPEC_DIR": str(runtime_paths["spec_dir"]),
@@ -344,11 +317,13 @@ def wait_log_web_url(state_file: Path, logger: Any, max_wait_sec: float = 5.0) -
 def start_web_console(
     repo_root: Path,
     config_path: Path,
+    config: dict[str, Any],
     pipeline_key: str,
     logger: Any,
     dry_run: bool,
 ) -> None:
-    scenario_logs = ensure_dir(repo_root / "scenarios" / pipeline_key / "logs")
+    scenarios_root = resolve_path(repo_root, config["paths"]["scenarios_root"])
+    scenario_logs = ensure_dir(scenarios_root / pipeline_key / "logs")
     web_log = scenario_logs / "web-console.log"
     command = [
         sys.executable,
@@ -458,15 +433,14 @@ def main() -> int:
 
         logger.warning("检测到历史状态但 Agent 已不在运行。将状态视为可恢复/可重试。")
 
-    branch_name = app_info["base_branch"]
-    ensure_base_branch(repo_root, config, branch_name, bootstrap_logger, args.dry_run)
-    scenario_root = prepare_scenario_root(repo_root, config, scenario_dir_name, bootstrap_logger, args.dry_run)
+    scenario_root = prepare_scenario_root(repo_root, config, app_key, scenario_dir_name, bootstrap_logger, args.dry_run)
     runtime_paths = build_runtime_paths(scenario_root)
     logger, log_file = prepare_logger(runtime_paths, scenario_dir_name)
 
     logger.info("开始执行 APP 场景自动化编排")
     logger.info("场景输入: %s", input_path)
     logger.info("识别 APP 类型: %s (%s)", app_key, app_info.get("display_name", app_key))
+    logger.info("基线目录: %s", app_info.get("baseline_dir"))
     logger.info("目标场景目录: %s", scenario_root)
 
     template_path = resolve_path(repo_root, config["paths"]["task_template"])
@@ -479,7 +453,6 @@ def main() -> int:
         scenario_payload=scenario_payload,
         app_key=app_key,
         app_info=app_info,
-        branch_name=branch_name,
         scenario_dir_name=scenario_dir_name,
         scenario_root=scenario_root,
         runtime_paths=runtime_paths,
@@ -505,9 +478,7 @@ def main() -> int:
             "scenario_question": scenario_question,
             "app_type": app_key,
             "app_display_name": app_info.get("display_name", app_key),
-            "base_branch": branch_name,
-            "branch_name": branch_name,
-            "scenario_branch": branch_name,
+            "baseline_dir": app_info.get("baseline_dir"),
             "status": "initialized",
             "created_at": task_started_at,
             "runtime_started_at": task_started_at,
@@ -531,7 +502,7 @@ def main() -> int:
     )
     update_runtime_state(state_file, state, logger)
 
-    logger.info("Git 基础分支与场景目录已就绪。")
+    logger.info("场景目录已就绪（基于基线 copy，不需要 git 分支操作）。")
     state["pipeline_root"] = str(scenario_root)
     state = update_state_status(state, "git_ready")
     update_runtime_state(state_file, state, logger)
@@ -553,12 +524,13 @@ def main() -> int:
     update_runtime_state(state_file, state, logger)
 
     if not args.no_web:
-        start_web_console(repo_root, config_path, scenario_dir_name, logger, args.dry_run)
+        start_web_console(repo_root, config_path, config, scenario_dir_name, logger, args.dry_run)
         web_url = wait_log_web_url(state_file, logger)
         if web_url:
             logger.info("Web 控制台已就绪，访问地址: %s", web_url)
         else:
-            web_log = repo_root / "scenarios" / scenario_dir_name / "logs" / "web-console.log"
+            scenarios_root = resolve_path(repo_root, config["paths"]["scenarios_root"])
+            web_log = scenarios_root / scenario_dir_name / "logs" / "web-console.log"
             logger.warning(
                 "Web 子进程在数秒内未把访问地址写入状态文件。请打开日志排查: %s 或见 %s 中的 web 字段。",
                 web_log,
