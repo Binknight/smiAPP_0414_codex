@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import argparse
 import json
@@ -9,27 +9,29 @@ import signal
 import socket
 import subprocess
 import threading
+import time
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 from common import (
     configure_stdio,
     detect_build_success,
-    format_display_time,
     ensure_dir,
+    format_display_time,
     is_process_running,
     load_runtime_state,
     now_local_iso,
     read_json,
     resolve_path,
+    setup_logger,
     setup_stream_logger,
     update_runtime_state,
     windows_subprocess_kwargs,
 )
-from pipeline_monitor_lib import handle_state_file, run_loop
+from pipeline_monitor_lib import collect_state_files, handle_state_file, run_loop
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SUCCESS_STATUSES = {"pushed", "completed", "dry_run_success_detected"}
@@ -38,9 +40,14 @@ SUCCESS_STATUSES = {"pushed", "completed", "dry_run_success_detected"}
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="dev 本地任务控制台")
     parser.add_argument("--config", default="dev/config/pipeline.config.json", help="主配置文件路径")
-    parser.add_argument("--state-file", required=True, help="当前任务的 runtime state 文件")
+    parser.add_argument("--selected", default="baseApp", help="默认选中的 pipeline")
     parser.add_argument("--host", default="127.0.0.1", help="Web 服务监听地址")
     parser.add_argument("--port", type=int, default=8765, help="Web 服务监听端口")
+    parser.add_argument(
+        "--log-file",
+        default=None,
+        help="将 Web 服务日志写入该文件（子进程/无控制台时便于排错）",
+    )
     parser.add_argument("--dry-run", action="store_true", help="巡检使用 dry-run 模式")
     return parser.parse_args()
 
@@ -49,8 +56,11 @@ def load_config(config_path: Path) -> dict[str, Any]:
     return read_json(config_path)
 
 
-def prepare_web_logger() -> Any:
-    return setup_stream_logger("dev-web-console")
+def prepare_web_logger(log_path: Path | None) -> Any:
+    if log_path is None:
+        return setup_stream_logger("dev-web-console")
+    ensure_dir(log_path.parent)
+    return setup_logger("dev-web-console", log_path)
 
 
 def find_available_port(host: str, starting_port: int, attempts: int = 20) -> int:
@@ -68,74 +78,63 @@ def read_log_content(path: Path) -> str:
     return path.read_text(encoding="utf-8", errors="replace")
 
 
-def extract_hap_paths_from_log(content: str) -> list[str]:
-    if not content:
-        return []
-    patterns = [
-        r"(?i)([A-Z]:\\[^\r\n\"'<>|?*]+?\.hap)",
-        r"(?i)\b((?:\.\.?[\\/])?entry[\\/][^\r\n\"']+?\.hap)\b",
-    ]
-    matches: list[str] = []
-    seen: set[str] = set()
-    for pattern in patterns:
-        for match in re.finditer(pattern, content):
-            candidate = match.group(1).strip()
-            normalized = candidate.lower()
-            if normalized in seen:
-                continue
-            seen.add(normalized)
-            matches.append(candidate)
-    return matches
+def get_safe_tmp_name(target_build: str) -> str:
+    return target_build.replace("/", "-").replace("\\", "-").strip("-").lower()
 
 
-def resolve_hap_path(path_value: str | None) -> Path | None:
-    if not path_value:
-        return None
-    candidate = Path(path_value.strip())
-    if candidate.is_absolute():
-        return candidate.resolve()
-    return (REPO_ROOT / candidate).resolve()
+def get_workspace_output_dir(target_build: str) -> Path:
+    return REPO_ROOT / "tmp" / get_safe_tmp_name(target_build) / "entry" / "build" / "default" / "outputs" / "default"
 
 
-def build_artifact_payload(state: dict[str, Any], result_payload: dict[str, Any] | None) -> dict[str, Any] | None:
-    success = state.get("status") in SUCCESS_STATUSES
+def resolve_target_build_root(target_build: str) -> Path:
+    return resolve_path(REPO_ROOT, target_build)
+
+
+def list_artifact_candidates(target_build: str) -> list[Path]:
+    candidates: list[Path] = []
+    workspace_output = get_workspace_output_dir(target_build)
+    if workspace_output.exists():
+        candidates.extend(sorted(workspace_output.glob("*.hap"), key=lambda item: item.stat().st_mtime, reverse=True))
+
+    source_output = resolve_target_build_root(target_build) / "entry" / "build" / "default" / "outputs" / "default"
+    if source_output.exists():
+        candidates.extend(sorted(source_output.glob("*.hap"), key=lambda item: item.stat().st_mtime, reverse=True))
+    return candidates
+
+
+def build_artifact_payload(
+    target_build: str,
+    state: dict[str, Any] | None,
+    result_payload: dict[str, Any] | None,
+    pipeline_key: str,
+) -> dict[str, Any] | None:
+    success = False
+    if state:
+        success = state.get("status") in SUCCESS_STATUSES
     if not success and result_payload:
         success = detect_build_success(result_payload, ["success", "succeeded", "ok", "passed", "true"])
-    if not success:
+    if not success and pipeline_key != "baseApp":
         return None
 
-    candidates: list[str] = []
+    candidates: list[Path] = []
     artifact_path = None if not result_payload else result_payload.get("artifactPath") or result_payload.get("artifact_path")
     if artifact_path:
-        candidates.append(str(artifact_path))
-
-    log_paths = [
-        Path(str(state.get("agent", {}).get("log_path") or "")),
-        Path(str(state.get("log_file") or "")),
-    ]
-    for log_path in log_paths:
-        candidates.extend(extract_hap_paths_from_log(read_log_content(log_path)))
+        candidates.append(resolve_path(REPO_ROOT, str(artifact_path)))
+    candidates.extend(list_artifact_candidates(target_build))
 
     seen: set[str] = set()
     for candidate in candidates:
-        resolved = resolve_hap_path(candidate)
-        if resolved is None:
+        if not candidate.exists() or candidate.suffix.lower() != ".hap":
             continue
-        resolved_key = str(resolved).lower()
-        if resolved_key in seen:
+        key = str(candidate.resolve()).lower()
+        if key in seen:
             continue
-        seen.add(resolved_key)
-        try:
-            resolved.relative_to(REPO_ROOT)
-        except ValueError:
-            continue
-        if not resolved.exists() or resolved.suffix.lower() != ".hap":
-            continue
+        seen.add(key)
         return {
-            "path": str(resolved),
-            "name": resolved.name,
-            "sizeBytes": resolved.stat().st_size,
-            "downloadUrl": "/api/task/current/artifact",
+            "path": str(candidate.resolve()),
+            "name": candidate.name,
+            "sizeBytes": candidate.stat().st_size,
+            "downloadUrl": f"/api/pipelines/current/artifact?pipeline={pipeline_key}",
         }
     return None
 
@@ -170,9 +169,7 @@ def terminate_pid(pid: int) -> bool:
     return result.returncode == 0
 
 
-def list_web_console_pids_for_state(state_file: Path) -> list[int]:
-    normalized = str(state_file.resolve()).lower()
-    script_name = str((Path(__file__).resolve())).lower()
+def list_web_console_pids(logger: Any) -> list[int]:
     current_pid = os.getpid()
     process_query = subprocess.run(
         [
@@ -197,11 +194,13 @@ def list_web_console_pids_for_state(state_file: Path) -> list[int]:
     try:
         payload = json.loads(process_query.stdout)
     except json.JSONDecodeError:
+        logger.warning("无法解析 Web 控制台进程列表。")
         return []
 
     if isinstance(payload, dict):
         payload = [payload]
 
+    script_name = str(Path(__file__).resolve()).lower()
     matches: list[int] = []
     for item in payload:
         pid = int(item.get("ProcessId") or 0)
@@ -211,8 +210,6 @@ def list_web_console_pids_for_state(state_file: Path) -> list[int]:
         if "web_console.py" not in command_line:
             continue
         if script_name not in command_line:
-            continue
-        if normalized not in command_line:
             continue
         matches.append(pid)
     return matches
@@ -226,19 +223,28 @@ def stop_pid(pid: int) -> bool:
     return True
 
 
-def stop_other_web_consoles(state_file: Path, logger: Any) -> list[int]:
+def stop_other_web_consoles(logger: Any) -> list[int]:
     stopped: list[int] = []
-    for pid in list_web_console_pids_for_state(state_file):
+    for pid in list_web_console_pids(logger):
         if stop_pid(pid):
             stopped.append(pid)
     if stopped:
-        logger.info("已停止同任务的历史 Web 控制台进程: %s", ", ".join(str(pid) for pid in stopped))
+        logger.info("已停止历史 Web 控制台进程: %s", ", ".join(str(pid) for pid in stopped))
     return stopped
 
 
-def compute_progress(state: dict[str, Any]) -> dict[str, Any]:
+def compute_progress(state: dict[str, Any] | None, result_exists: bool) -> dict[str, Any]:
+    if not state:
+        current = 1 if not result_exists else 6
+        return {
+            "currentStep": current,
+            "totalSteps": 6,
+            "percent": int(current / 6 * 100),
+            "label": "已构建" if result_exists else "未启动流水线",
+            "steps": ["任务初始化", "仿真基线准备", "Agent 运行时", "状态巡检", "结果输出", "完成"],
+        }
+
     inspection = state.get("inspection") or {}
-    result_exists = Path(state["result_json"]).exists()
     current = 1
     label = "任务初始化"
     status = state.get("status")
@@ -260,43 +266,18 @@ def compute_progress(state: dict[str, Any]) -> dict[str, Any]:
         current = 6
         label = "完成"
 
-    total = 6
     return {
         "currentStep": current,
-        "totalSteps": total,
-        "percent": int(current / total * 100),
+        "totalSteps": 6,
+        "percent": int(current / 6 * 100),
         "label": label,
-        "steps": [
-            "任务初始化",
-            "仿真基线准备",
-            "Agent 运行时",
-            "状态巡检",
-            "结果输出",
-            "完成",
-        ],
+        "steps": ["任务初始化", "仿真基线准备", "Agent 运行时", "状态巡检", "结果输出", "完成"],
     }
 
 
-def infer_scenario_question(state: dict[str, Any]) -> str | None:
-    question = state.get("scenario_question")
-    if question:
-        return str(question)
-    scenario_input = state.get("scenario_input")
-    if not scenario_input:
-        return None
-    input_path = Path(str(scenario_input))
-    if not input_path.exists():
-        return None
-    try:
-        payload = read_json(input_path)
-    except Exception:
-        return None
-    return payload.get("question") or payload.get("prompt")
-
-
-def build_agent_runtime_payload(state: dict[str, Any]) -> dict[str, Any]:
-    runtime = dict(state.get("agent", {}).get("runtime") or {})
-    agent_state = state.get("agent") or {}
+def build_agent_runtime_payload(state: dict[str, Any] | None) -> dict[str, Any]:
+    runtime = dict((state or {}).get("agent", {}).get("runtime") or {})
+    agent_state = (state or {}).get("agent") or {}
     session_id = (
         runtime.get("session_id")
         or runtime.get("sessionId")
@@ -305,9 +286,11 @@ def build_agent_runtime_payload(state: dict[str, Any]) -> dict[str, Any]:
         or extract_session_id_from_agent_log(agent_state.get("log_path"))
         or os.environ.get("CODEX_SESSION_ID")
         or os.environ.get("OPENAI_SESSION_ID")
+        or os.environ.get("OPENCODE_SESSION_ID")
     )
-    runtime.setdefault("workspace", str(Path(__file__).resolve().parents[2]))
-    runtime.setdefault("name", "codex cli")
+    runtime.setdefault("workspace", str(REPO_ROOT))
+    _atype = (agent_state.get("type") or "codex_cli") if (state) else "codex_cli"
+    runtime.setdefault("name", str(_atype).replace("_", " ").lower())
     runtime.setdefault("model", os.environ.get("CODEX_MODEL", "gpt-5.4"))
     runtime.setdefault("provider", os.environ.get("CODEX_PROVIDER", "openai"))
     runtime.setdefault("approval_policy", os.environ.get("CODEX_APPROVAL_POLICY", "never"))
@@ -320,16 +303,155 @@ def build_agent_runtime_payload(state: dict[str, Any]) -> dict[str, Any]:
     return runtime
 
 
-def build_task_payload(state_file: Path) -> dict[str, Any]:
+def get_pipeline_roots(repo_root: Path, config: dict[str, Any]) -> tuple[Path, Path]:
+    base_app_root = resolve_path(repo_root, config["paths"]["base_app_root"])
+    scenarios_root = ensure_dir(resolve_path(repo_root, config["paths"]["scenarios_root"]))
+    return base_app_root, scenarios_root
+
+
+def scenario_target_build(config: dict[str, Any], scenario_name: str) -> str:
+    """config 中 scenarios 根路径的 POSIX 形式，供 targetBuild / build_artifact 使用。
+    单独函数是为了避免在 f-string 表达式里写 .replace('\\\\', '/')（部分 Python 版本会 SyntaxError）。"""
+    root = str(config["paths"]["scenarios_root"]).replace("\\", "/")
+    return f"{root}/{scenario_name}"
+
+
+def get_state_file_for_pipeline(pipeline_root: Path) -> Path | None:
+    state_file = pipeline_root / "state" / "runtime.json"
+    return state_file if state_file.exists() else None
+
+
+def build_base_pipeline_summary(base_app_root: Path) -> dict[str, Any]:
+    artifact = build_artifact_payload("baseApp", None, None, "baseApp")
+    return {
+        "key": "baseApp",
+        "name": "baseApp",
+        "type": "baseApp",
+        "targetBuild": "baseApp",
+        "root": str(base_app_root),
+        "status": "ready" if artifact else "idle",
+        "branchName": None,
+        "updatedAt": format_display_time(now_local_iso()),
+        "hasState": False,
+        "hasArtifact": bool(artifact),
+    }
+
+
+def list_pipeline_summaries(repo_root: Path, config: dict[str, Any]) -> list[dict[str, Any]]:
+    base_app_root, scenarios_root = get_pipeline_roots(repo_root, config)
+    items = [build_base_pipeline_summary(base_app_root)]
+    for scenario_root in sorted(scenarios_root.iterdir()):
+        if not scenario_root.is_dir():
+            continue
+        state_file = get_state_file_for_pipeline(scenario_root)
+        state = load_runtime_state(state_file) if state_file else None
+        tb = scenario_target_build(config, scenario_root.name)
+        items.append(
+            {
+                "key": scenario_root.name,
+                "name": scenario_root.name,
+                "type": "scenario",
+                "targetBuild": tb,
+                "root": str(scenario_root),
+                "status": (state or {}).get("status") or "idle",
+                "branchName": (state or {}).get("branch_name") or (state or {}).get("base_branch"),
+                "updatedAt": format_display_time((state or {}).get("updated_at")),
+                "hasState": bool(state),
+                "hasArtifact": bool(build_artifact_payload(tb, state, (state or {}).get("result_payload"), scenario_root.name)),
+            }
+        )
+    return items
+
+
+def get_pipeline_context(repo_root: Path, config: dict[str, Any], pipeline_key: str) -> dict[str, Any]:
+    base_app_root, scenarios_root = get_pipeline_roots(repo_root, config)
+    if pipeline_key == "baseApp":
+        return {
+            "key": "baseApp",
+            "name": "baseApp",
+            "type": "baseApp",
+            "root": base_app_root,
+            "target_build": "baseApp",
+            "state_file": None,
+        }
+
+    scenario_root = scenarios_root / pipeline_key
+    if not scenario_root.exists():
+        raise FileNotFoundError(f"未找到 pipeline: {pipeline_key}")
+    return {
+        "key": pipeline_key,
+        "name": pipeline_key,
+        "type": "scenario",
+        "root": scenario_root,
+        "target_build": scenario_target_build(config, pipeline_key),
+        "state_file": get_state_file_for_pipeline(scenario_root),
+    }
+
+
+def build_synthetic_payload(context: dict[str, Any]) -> dict[str, Any]:
+    artifact = build_artifact_payload(context["target_build"], None, None, context["key"])
+    progress = compute_progress(None, artifact is not None)
+    return {
+        "pipelineKey": context["key"],
+        "pipelineType": context["type"],
+        "pipelineName": context["name"],
+        "pipelineRoot": str(context["root"]),
+        "scenarioId": context["key"],
+        "scenarioKey": context["key"],
+        "scenarioInput": None,
+        "scenarioQuestion": None,
+        "appType": None,
+        "appDisplayName": None,
+        "baseBranch": None,
+        "branchName": None,
+        "status": "ready" if artifact else "idle",
+        "createdAt": None,
+        "updatedAt": format_display_time(now_local_iso()),
+        "runtimeStartedAt": None,
+        "runtimeEndedAt": None,
+        "logFile": None,
+        "resultJson": None,
+        "resultExists": False,
+        "resultPayload": None,
+        "artifact": artifact,
+        "agent": {
+            "type": None,
+            "pid": None,
+            "startedAt": None,
+            "running": False,
+            "logPath": None,
+            "command": None,
+            "workspace": str(REPO_ROOT),
+            "sessionId": None,
+            "runtime": build_agent_runtime_payload(None),
+        },
+        "inspection": {
+            "status": "idle",
+            "lastCheckedAt": None,
+            "cycleCount": 0,
+            "message": "该 pipeline 尚未启动自动化流水线",
+        },
+        "web": {},
+        "progress": progress,
+        "targetBuild": context["target_build"],
+    }
+
+
+def build_task_payload(repo_root: Path, config: dict[str, Any], pipeline_key: str) -> dict[str, Any]:
+    context = get_pipeline_context(repo_root, config, pipeline_key)
+    state_file = context["state_file"]
+    if not state_file:
+        return build_synthetic_payload(context)
+
     state = load_runtime_state(state_file)
     if not state:
-        return {"error": "state_not_found"}
-    inspection = state.get("inspection") or {}
+        return build_synthetic_payload(context)
+
     result_json = Path(state["result_json"])
     result_payload = state.get("result_payload")
     if result_payload is None and result_json.exists():
         result_payload = read_json(result_json)
-    artifact = build_artifact_payload(state, result_payload)
+    artifact = build_artifact_payload(context["target_build"], state, result_payload, pipeline_key)
     agent_runtime = build_agent_runtime_payload(state)
     runtime_started_at = state.get("runtime_started_at") or state.get("created_at")
     runtime_ended_at = state.get("runtime_ended_at")
@@ -348,14 +470,18 @@ def build_task_payload(state_file: Path) -> dict[str, Any]:
             or state.get("updated_at")
         )
     return {
+        "pipelineKey": state.get("pipeline_key") or pipeline_key,
+        "pipelineType": state.get("pipeline_type") or context["type"],
+        "pipelineName": state.get("pipeline_name") or pipeline_key,
+        "pipelineRoot": state.get("pipeline_root") or str(context["root"]),
         "scenarioId": state.get("scenario_id"),
         "scenarioKey": state.get("scenario_key"),
         "scenarioInput": state.get("scenario_input"),
-        "scenarioQuestion": infer_scenario_question(state),
+        "scenarioQuestion": state.get("scenario_question"),
         "appType": state.get("app_type"),
         "appDisplayName": state.get("app_display_name"),
         "baseBranch": state.get("base_branch"),
-        "scenarioBranch": state.get("scenario_branch"),
+        "branchName": state.get("branch_name") or state.get("scenario_branch"),
         "status": state.get("status"),
         "createdAt": format_display_time(state.get("created_at")),
         "updatedAt": format_display_time(state.get("updated_at")),
@@ -378,17 +504,42 @@ def build_task_payload(state_file: Path) -> dict[str, Any]:
             "runtime": agent_runtime,
         },
         "inspection": {
-            "status": inspection.get("status"),
-            "lastCheckedAt": format_display_time(inspection.get("last_checked_at")),
-            "cycleCount": inspection.get("cycle_count"),
-            "message": inspection.get("message"),
+            "status": (state.get("inspection") or {}).get("status"),
+            "lastCheckedAt": format_display_time((state.get("inspection") or {}).get("last_checked_at")),
+            "cycleCount": (state.get("inspection") or {}).get("cycle_count"),
+            "message": (state.get("inspection") or {}).get("message"),
         },
         "web": state.get("web") or {},
-        "progress": compute_progress(state),
+        "progress": compute_progress(state, result_json.exists()),
+        "targetBuild": context["target_build"],
     }
 
 
-def mark_web_stopped(state_file: Path, logger: Any) -> None:
+def get_selected_pipeline(handler: "ConsoleHandler") -> str:
+    parsed = urlparse(handler.path)
+    query = parse_qs(parsed.query)
+    return query.get("pipeline", [handler.server.selected])[0]
+
+
+def mark_web_state(state_file: Path | None, logger: Any, host: str, port: int) -> None:
+    if not state_file:
+        return
+    state = load_runtime_state(state_file)
+    if not state:
+        return
+    state["web"] = {
+        "host": host,
+        "port": port,
+        "url": f"http://{host}:{port}",
+        "started_at": now_local_iso(),
+        "pid": os.getpid(),
+    }
+    update_runtime_state(state_file, state, logger)
+
+
+def mark_web_stopped(state_file: Path | None, logger: Any) -> None:
+    if not state_file:
+        return
     state = load_runtime_state(state_file)
     if not state:
         return
@@ -402,9 +553,9 @@ def mark_web_stopped(state_file: Path, logger: Any) -> None:
 
 
 class ConsoleHandler(BaseHTTPRequestHandler):
-    server_version = "DevConsole/1.0"
+    server_version = "DevConsole/2.0"
 
-    def _send_json(self, payload: dict[str, Any], status: int = HTTPStatus.OK) -> None:
+    def _send_json(self, payload: dict[str, Any] | list[Any], status: int = HTTPStatus.OK) -> None:
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -442,33 +593,33 @@ class ConsoleHandler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:
         parsed = urlparse(self.path)
-        if parsed.path == "/api/task/current":
-            self._send_json(build_task_payload(self.server.state_file))
-            return
-        if parsed.path == "/api/task/current/progress":
-            task = build_task_payload(self.server.state_file)
-            self._send_json(task.get("progress") or {})
-            return
-        if parsed.path == "/api/task/current/logs":
-            state = load_runtime_state(self.server.state_file) or {}
+        pipeline_key = get_selected_pipeline(self)
+        if parsed.path == "/api/pipelines":
             payload = {
-                "pipelineLog": read_log_content(Path(state.get("log_file", ""))),
-                "agentLog": read_log_content(Path(state.get("agent", {}).get("log_path", ""))),
+                "selected": pipeline_key,
+                "items": list_pipeline_summaries(self.server.repo_root, self.server.config),
             }
             self._send_json(payload)
             return
-        if parsed.path == "/api/task/current/artifact":
-            task = build_task_payload(self.server.state_file)
+        if parsed.path == "/api/pipelines/current":
+            self._send_json(build_task_payload(self.server.repo_root, self.server.config, pipeline_key))
+            return
+        if parsed.path == "/api/pipelines/current/logs":
+            context = get_pipeline_context(self.server.repo_root, self.server.config, pipeline_key)
+            state = load_runtime_state(context["state_file"]) if context["state_file"] else {}
+            payload = {
+                "pipelineLog": read_log_content(Path((state or {}).get("log_file", ""))),
+                "agentLog": read_log_content(Path(((state or {}).get("agent", {}) or {}).get("log_path", ""))),
+            }
+            self._send_json(payload)
+            return
+        if parsed.path == "/api/pipelines/current/artifact":
+            task = build_task_payload(self.server.repo_root, self.server.config, pipeline_key)
             artifact = task.get("artifact") or {}
             path_value = artifact.get("path")
-            artifact_path = resolve_hap_path(str(path_value)) if path_value else None
-            if artifact_path is None:
+            artifact_path = Path(str(path_value)).resolve() if path_value else None
+            if artifact_path is None or not artifact_path.exists():
                 self.send_error(HTTPStatus.NOT_FOUND)
-                return
-            try:
-                artifact_path.relative_to(REPO_ROOT)
-            except ValueError:
-                self.send_error(HTTPStatus.FORBIDDEN)
                 return
             self._send_download_file(artifact_path)
             return
@@ -485,8 +636,14 @@ class ConsoleHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         parsed = urlparse(self.path)
-        if parsed.path == "/api/task/current/terminate":
-            state = load_runtime_state(self.server.state_file)
+        pipeline_key = get_selected_pipeline(self)
+        if parsed.path == "/api/pipelines/current/terminate":
+            context = get_pipeline_context(self.server.repo_root, self.server.config, pipeline_key)
+            state_file = context["state_file"]
+            if not state_file:
+                self._send_json({"ok": False, "message": "state_not_found"}, status=HTTPStatus.NOT_FOUND)
+                return
+            state = load_runtime_state(state_file)
             if not state:
                 self._send_json({"ok": False, "message": "state_not_found"}, status=HTTPStatus.NOT_FOUND)
                 return
@@ -504,24 +661,26 @@ class ConsoleHandler(BaseHTTPRequestHandler):
             inspection["last_checked_at"] = inspection.get("last_checked_at") or state["cancelled_at"]
             state["inspection"] = inspection
             state["updated_at"] = state["cancelled_at"]
-            update_runtime_state(self.server.state_file, state, self.server.logger)
-            stopped_pids = stop_other_web_consoles(self.server.state_file, self.server.logger)
-            self.server.stop_event.set()
-            self._send_json(
-                {
-                    "ok": True,
-                    "terminated": running,
-                    "status": state["status"],
-                    "stoppedConsolePids": stopped_pids,
-                }
-            )
+            update_runtime_state(state_file, state, self.server.logger)
+            self._send_json({"ok": True, "terminated": running, "status": state["status"]})
             return
 
         if parsed.path == "/api/console/shutdown":
-            mark_web_stopped(self.server.state_file, self.server.logger)
+            context = get_pipeline_context(self.server.repo_root, self.server.config, self.server.selected)
+            mark_web_stopped(context["state_file"], self.server.logger)
             self._send_json({"ok": True, "message": "console_shutting_down"})
             self.server.stop_event.set()
-            threading.Thread(target=self.server.shutdown, daemon=True).start()
+            try:
+                self.wfile.flush()
+            except OSError:
+                pass
+
+            def _exit_after_response() -> None:
+                time.sleep(0.25)
+                os._exit(0)
+
+            # ThreadingHTTPServer.shutdown()+serve_forever 在部分 Windows 环境无法可靠收束主线程，进程仍挂起
+            threading.Thread(target=_exit_after_response, name="dev-web-exit", daemon=True).start()
             return
 
         self.send_error(HTTPStatus.NOT_FOUND)
@@ -536,36 +695,25 @@ class ConsoleServer(ThreadingHTTPServer):
         server_address: tuple[str, int],
         handler_class: type[BaseHTTPRequestHandler],
         *,
-        state_file: Path,
+        repo_root: Path,
+        config: dict[str, Any],
+        selected: str,
         static_root: Path,
         logger: Any,
         stop_event: threading.Event,
     ) -> None:
         super().__init__(server_address, handler_class)
-        self.state_file = state_file
+        self.repo_root = repo_root
+        self.config = config
+        self.selected = selected
         self.static_root = static_root.resolve()
         self.logger = logger
         self.stop_event = stop_event
 
 
-def mark_web_state(state_file: Path, logger: Any, host: str, port: int) -> None:
-    state = load_runtime_state(state_file)
-    if not state:
-        return
-    state["web"] = {
-        "host": host,
-        "port": port,
-        "url": f"http://{host}:{port}",
-        "started_at": now_local_iso(),
-        "pid": os.getpid(),
-    }
-    update_runtime_state(state_file, state, logger)
-
-
 def start_inspection_thread(
     repo_root: Path,
     config: dict[str, Any],
-    state_file: Path,
     logger: Any,
     dry_run: bool,
     stop_event: threading.Event,
@@ -575,7 +723,7 @@ def start_inspection_thread(
         kwargs={
             "repo_root": repo_root,
             "config": config,
-            "state_arg": str(state_file),
+            "state_arg": None,
             "logger": logger,
             "dry_run": dry_run,
             "stop_event": stop_event,
@@ -593,37 +741,42 @@ def main() -> int:
     config_path = Path(args.config).resolve()
     config = load_config(config_path)
     repo_root = resolve_path(config_path.parent.parent.parent, config["paths"]["repo_root"])
-    state_file = resolve_path(repo_root, args.state_file)
-    logger = prepare_web_logger()
+    log_path: Path | None = Path(args.log_file).resolve() if args.log_file else None
+    logger = prepare_web_logger(log_path)
     host = args.host
     port = find_available_port(host, args.port)
     static_root = ensure_dir(repo_root / "dev" / "frontend")
     stop_event = threading.Event()
 
-    stop_other_web_consoles(state_file, logger)
+    stop_other_web_consoles(logger)
 
-    handle_state_file(repo_root, config, state_file, logger, args.dry_run)
-    start_inspection_thread(repo_root, config, state_file, logger, args.dry_run, stop_event)
+    for state_file in collect_state_files(repo_root, config, None):
+        handle_state_file(repo_root, config, state_file, logger, args.dry_run)
+
+    start_inspection_thread(repo_root, config, logger, args.dry_run, stop_event)
     server = ConsoleServer(
         (host, port),
         ConsoleHandler,
-        state_file=state_file,
+        repo_root=repo_root,
+        config=config,
+        selected=args.selected,
         static_root=static_root,
         logger=logger,
         stop_event=stop_event,
     )
-    mark_web_state(state_file, logger, host, port)
-    logger.info("Web æŽ§åˆ¶å°å·²å¯åŠ¨: http://%s:%s", host, port)
+    selected_context = get_pipeline_context(repo_root, config, args.selected)
+    mark_web_state(selected_context["state_file"], logger, host, port)
+    logger.info("Web 控制台已启动: http://%s:%s", host, port)
     try:
         server.serve_forever(poll_interval=0.5)
     except KeyboardInterrupt:
-        logger.info("æ”¶åˆ°ä¸­æ–­ä¿¡å·ï¼Œå‡†å¤‡å…³é—­ Web æŽ§åˆ¶å°ã€‚")
+        logger.info("收到中断信号，准备关闭 Web 控制台。")
     finally:
         stop_event.set()
+        mark_web_stopped(selected_context["state_file"], logger)
         server.server_close()
     return 0
 
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

@@ -1,0 +1,16 @@
+{
+  "string": [
+    {
+      "name": "app_name",
+      "value": "ArkUI Demo"
+    },
+    {
+      "name": "module_desc",
+      "value": "A simple HarmonyOS ArkUI sample app."
+    },
+    {
+      "name": "entry_desc",
+      "value": "Main entry ability."
+    }
+  ]
+}

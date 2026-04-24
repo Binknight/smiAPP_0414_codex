@@ -97,6 +97,8 @@ def setup_logger(name: str, log_file: Path) -> logging.Logger:
     ensure_dir(log_file.parent)
     logger = logging.getLogger(name)
     logger.setLevel(logging.INFO)
+    for handler in logger.handlers[:]:
+        handler.close()
     logger.handlers.clear()
     logger.propagate = False
 

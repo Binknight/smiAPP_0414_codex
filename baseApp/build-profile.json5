@@ -22,13 +22,13 @@
         "name": "default",
         "type": "HarmonyOS",
         "material": {
-          "certpath": "C:\\Users\\ttelab\\.ohos\\config\\default_HarmonyArkUIDemo__PGa8l51uTNRxmyDU8J_7iRlNZ2sQJ1tdzm6JseuOSw=.cer",
-          "keyAlias": "debugKey",
-          "keyPassword": "0000001B9130A8B1296B312C44C4A0A78E6F12ED557D321479B2F5BF53AFBC370CDF8E0CD55D8194394E59",
-          "profile": "C:\\Users\\ttelab\\.ohos\\config\\default_HarmonyArkUIDemo__PGa8l51uTNRxmyDU8J_7iRlNZ2sQJ1tdzm6JseuOSw=.p7b",
-          "signAlg": "SHA256withECDSA",
-          "storeFile": "C:\\Users\\ttelab\\.ohos\\config\\default_HarmonyArkUIDemo__PGa8l51uTNRxmyDU8J_7iRlNZ2sQJ1tdzm6JseuOSw=.p12",
-          "storePassword": "0000001B84FDD04D0FF3D1F22B2DB6F45A7D18E47E39DDAC0B295A1DEFBC3B1B40FCB9FA671763CB3ED1EE"
+          "certpath": "__OHOS_CERT_PATH__",
+          "keyAlias": "__OHOS_KEY_ALIAS__",
+          "keyPassword": "__OHOS_KEY_PASSWORD__",
+          "profile": "__OHOS_PROFILE_PATH__",
+          "signAlg": "__OHOS_SIGN_ALG__",
+          "storeFile": "__OHOS_STORE_FILE__",
+          "storePassword": "__OHOS_STORE_PASSWORD__"
         }
       }
     ]

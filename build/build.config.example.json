@@ -1,0 +1,15 @@
+{
+  "_comment": "复制为 build.config.json 后按需修改；build.config.json 已加入 .gitignore。devEcoStudioRoot 支持 %DEVECO_STUDIO_ROOT% 这类环境变量注入。compatSdkRoot 为 hvigor 兼容层根目录（含 platform 与联接），不要放在工程目录下。",
+  "devEcoStudioRoot": "%DEVECO_STUDIO_ROOT%",
+  "sdkRelativePath": "sdk\\default",
+  "compatSdkRoot": "%LOCALAPPDATA%\\HarmonyArkUIDemo\\sdk-compat",
+  "hvigorJsPath": null,
+  "sdkPkg": {
+    "apiVersion": "22",
+    "displayName": "HarmonyOS 6.0.2",
+    "platformVersion": "6.0.2",
+    "version": "6.0.2.130",
+    "releaseType": "Release",
+    "stage": "Release"
+  }
+}

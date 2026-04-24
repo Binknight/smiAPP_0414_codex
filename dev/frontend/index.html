@@ -12,6 +12,10 @@
         <div class="hero-grid">
           <div class="hero-main">
             <p class="eyebrow">Simulation Pipeline</p>
+            <div class="selector-row">
+              <label for="pipeline-select">场景选择</label>
+              <select id="pipeline-select"></select>
+            </div>
             <div class="hero-title-row">
               <h1 id="task-title">加载中</h1>
               <a
@@ -29,7 +33,7 @@
           </div>
         </div>
 
-        <div class="metric-strip">
+        <div class="metric-strip metric-strip-wide">
           <article class="metric-card">
             <span>流水线状态</span>
             <strong id="status-pill">-</strong>
@@ -37,6 +41,10 @@
           <article class="metric-card">
             <span>仿真 APP 基线</span>
             <strong id="base-branch">-</strong>
+          </article>
+          <article class="metric-card">
+            <span>当前分支</span>
+            <strong id="branch-name">-</strong>
           </article>
           <article class="metric-card">
             <span>仿真 APP 类型</span>
@@ -92,7 +100,7 @@
             <div class="card-header">
               <div>
                 <h2>Agent 信息</h2>
-                <p class="card-note">执行环境、模型参数与当前会话信息</p>
+                <p class="card-note">执行环境、模型参数与会话信息</p>
               </div>
               <strong class="card-state" id="agent-running-state">-</strong>
             </div>
@@ -102,7 +110,7 @@
               <div class="info-cell"><span>模型</span><strong id="agent-model">-</strong></div>
               <div class="info-cell"><span>提供商</span><strong id="agent-provider">-</strong></div>
               <div class="info-cell"><span>审批</span><strong id="agent-approval">-</strong></div>
-              <div class="info-cell"><span>沙盒权限</span><strong id="agent-sandbox">-</strong></div>
+              <div class="info-cell"><span>沙箱权限</span><strong id="agent-sandbox">-</strong></div>
               <div class="info-cell"><span>推理等级</span><strong id="agent-reasoning-effort">-</strong></div>
               <div class="info-cell"><span>推理摘要</span><strong id="agent-reasoning-summary">-</strong></div>
               <div class="info-cell info-cell-wide"><span>会话 ID</span><strong id="agent-session-id">-</strong></div>

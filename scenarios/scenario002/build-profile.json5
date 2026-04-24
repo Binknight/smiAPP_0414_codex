@@ -1,0 +1,50 @@
+{
+  "app": {
+    "products": [
+      {
+        "name": "default",
+        "signingConfig": "default",
+        "compatibleSdkVersion": "6.0.2(22)",
+        "runtimeOS": "HarmonyOS",
+        "targetSdkVersion": "6.0.2(22)"
+      }
+    ],
+    "buildModeSet": [
+      {
+        "name": "debug"
+      },
+      {
+        "name": "release"
+      }
+    ],
+    "signingConfigs": [
+      {
+        "name": "default",
+        "type": "HarmonyOS",
+        "material": {
+          "certpath": "__OHOS_CERT_PATH__",
+          "keyAlias": "__OHOS_KEY_ALIAS__",
+          "keyPassword": "__OHOS_KEY_PASSWORD__",
+          "profile": "__OHOS_PROFILE_PATH__",
+          "signAlg": "__OHOS_SIGN_ALG__",
+          "storeFile": "__OHOS_STORE_FILE__",
+          "storePassword": "__OHOS_STORE_PASSWORD__"
+        }
+      }
+    ]
+  },
+  "modules": [
+    {
+      "name": "entry",
+      "srcPath": "./entry",
+      "targets": [
+        {
+          "name": "default",
+          "applyToProducts": [
+            "default"
+          ]
+        }
+      ]
+    }
+  ]
+}
