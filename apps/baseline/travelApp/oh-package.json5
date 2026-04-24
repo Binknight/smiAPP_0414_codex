@@ -1,0 +1,9 @@
+{
+  "modelVersion": "6.0.1",
+  "description": "Simple ArkUI demo app",
+  "dependencies": {},
+  "devDependencies": {
+    "@ohos/hvigor": "6.0.1",
+    "@ohos/hvigor-ohos-plugin": "6.0.1"
+  }
+}

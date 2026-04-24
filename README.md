@@ -1,17 +1,25 @@
 # HarmonyArkUIDemo
 
-仓库现在采用两层工程结构：
+仓库现在采用多层工程结构：
 
-- `baseApp/`：基线工程，只保存可复用的基础版本
-- `scenarios/scenarioxxx/`：具体场景工程副本，每个目录独立保存 spec、mock、输出、日志和状态
+- `apps/baseline/commonApp/`：通用基线工程，只保存可复用的基础版本
+- `apps/baseline/travelApp/`：出行类 APP
+- `apps/baseline/exploreApp/`：内容类 APP
+- `apps/baseline/shoppingApp/`：购物类 APP
+- `apps/baseline/deliveryApp/`：外卖类 APP
+- `apps/scenarios/scenarioxxx/`：具体场景工程副本，每个目录独立保存 spec、mock、输出、日志和状态
+- `scenarios/scenarioxxx/`：旧版场景工程目录（迁移过渡期保留）
 
 ## 构建
 
 命令行构建入口统一为 `build/build.ps1`，必须显式指定目标工程：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\build\build.ps1 -Target baseApp
-powershell -ExecutionPolicy Bypass -File .\build\build.ps1 -Target scenarios/scenario001
+powershell -ExecutionPolicy Bypass -File .\build\build.ps1 -Target apps/baseline/commonApp
+powershell -ExecutionPolicy Bypass -File .\build\build.ps1 -Target apps/baseline/travelApp
+powershell -ExecutionPolicy Bypass -File .\build\build.ps1 -Target apps/baseline/exploreApp
+powershell -ExecutionPolicy Bypass -File .\build\build.ps1 -Target apps/baseline/shoppingApp
+powershell -ExecutionPolicy Bypass -File .\build\build.ps1 -Target apps/scenarios/scenario001
 ```
 
 可选参数：
@@ -56,17 +64,31 @@ python dev/scripts/run_pipeline.py --input scenario1.json --wait
 
 `run_pipeline.py` 默认会启动本地 Web 控制台。控制台会扫描当前分支工作区中的：
 
-- `baseApp`
-- `scenarios/scenarioxxx`
+- `apps/baseline/` 下的基线工程（`commonApp`、`travelApp`、`exploreApp` 等）
+- `apps/scenarios/scenarioxxx`
+- `scenarios/scenarioxxx`（旧版过渡目录）
 
 页面支持切换查看不同 pipeline 的状态、日志、产物下载和终止动作。
 
 ## 目录约定
 
 ```text
-baseApp/
+apps/
+  baseline/
+    commonApp/
+    travelApp/
+    exploreApp/
+    shoppingApp/
+    deliveryApp/
+  scenarios/
+    scenario001/
+      spec/
+      mock-data/
+      output/
+      logs/
+      state/
 scenarios/
-  scenario001/
+  scenario001/       (旧版过渡目录)
     spec/
     mock-data/
     output/

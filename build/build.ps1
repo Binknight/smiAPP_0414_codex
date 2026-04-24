@@ -6,7 +6,7 @@ param(
 
     [string]$ConfigPath = '',
 
-    [string]$Target = 'baseApp'
+    [string]$Target = 'apps/baseline/commonApp'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -254,7 +254,7 @@ function Get-TargetInfo {
 
     $normalized = $RawTarget.Replace('/', '\').Trim('\')
     if ([string]::IsNullOrWhiteSpace($normalized)) {
-        throw 'Target is empty. Use -Target baseApp or -Target scenarios/scenario001.'
+        throw 'Target is empty. Use -Target apps/baseline/commonApp (or apps/baseline/travelApp, apps/baseline/exploreApp, etc.) or -Target apps/scenarios/scenario001.'
     }
 
     $targetPath = Join-Path $projectRoot $normalized
@@ -284,12 +284,22 @@ function Copy-Workspace {
     )
 
     if (Test-Path -LiteralPath $Destination) {
-        Remove-Item -LiteralPath $Destination -Recurse -Force
+        cmd /c "rmdir /s /q `"$Destination`"" 2>$null
     }
     New-Item -ItemType Directory -Force -Path $Destination | Out-Null
 
-    Get-ChildItem -LiteralPath $Source -Force | ForEach-Object {
+    $excludeNames = @('build', '.hvigor', 'node_modules', 'oh_modules')
+    Get-ChildItem -LiteralPath $Source -Force | Where-Object {
+        $excludeNames -notcontains $_.Name
+    } | ForEach-Object {
         Copy-Item -LiteralPath $_.FullName -Destination $Destination -Recurse -Force
+    }
+
+    $pruneNames = @('build', '.hvigor')
+    foreach ($name in $pruneNames) {
+        Get-ChildItem -LiteralPath $Destination -Directory -Recurse -Filter $name -ErrorAction SilentlyContinue | ForEach-Object {
+            Remove-Item -LiteralPath $_.FullName -Recurse -Force -ErrorAction SilentlyContinue
+        }
     }
 }
 

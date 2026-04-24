@@ -3,7 +3,7 @@ build.config.json
 .hvigor
 .idea
 .vscode
-baseApp/**/build/
+apps/**/build/
 local.properties
 node_modules
 *.hap

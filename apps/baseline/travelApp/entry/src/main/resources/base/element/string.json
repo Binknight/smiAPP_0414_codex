@@ -1,0 +1,16 @@
+{
+  "string": [
+    {
+      "name": "app_name",
+      "value": "途屿旅行"
+    },
+    {
+      "name": "module_desc",
+      "value": "旅游类仿真预订应用"
+    },
+    {
+      "name": "entry_desc",
+      "value": "旅游类 APP 主入口"
+    }
+  ]
+}

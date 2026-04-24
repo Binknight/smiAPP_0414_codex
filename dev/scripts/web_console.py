@@ -321,14 +321,14 @@ def get_state_file_for_pipeline(pipeline_root: Path) -> Path | None:
     return state_file if state_file.exists() else None
 
 
-def build_base_pipeline_summary(base_app_root: Path) -> dict[str, Any]:
-    artifact = build_artifact_payload("baseApp", None, None, "baseApp")
+def build_base_pipeline_summary(base_app_root_str: str) -> dict[str, Any]:
+    artifact = build_artifact_payload(base_app_root_str, None, None, "baseApp")
     return {
         "key": "baseApp",
         "name": "baseApp",
         "type": "baseApp",
-        "targetBuild": "baseApp",
-        "root": str(base_app_root),
+        "targetBuild": base_app_root_str,
+        "root": base_app_root_str,
         "status": "ready" if artifact else "idle",
         "branchName": None,
         "updatedAt": format_display_time(now_local_iso()),
@@ -339,7 +339,8 @@ def build_base_pipeline_summary(base_app_root: Path) -> dict[str, Any]:
 
 def list_pipeline_summaries(repo_root: Path, config: dict[str, Any]) -> list[dict[str, Any]]:
     base_app_root, scenarios_root = get_pipeline_roots(repo_root, config)
-    items = [build_base_pipeline_summary(base_app_root)]
+    base_app_root_str = config["paths"]["base_app_root"]
+    items = [build_base_pipeline_summary(base_app_root_str)]
     for scenario_root in sorted(scenarios_root.iterdir()):
         if not scenario_root.is_dir():
             continue
@@ -365,13 +366,14 @@ def list_pipeline_summaries(repo_root: Path, config: dict[str, Any]) -> list[dic
 
 def get_pipeline_context(repo_root: Path, config: dict[str, Any], pipeline_key: str) -> dict[str, Any]:
     base_app_root, scenarios_root = get_pipeline_roots(repo_root, config)
+    base_app_root_str = config["paths"]["base_app_root"]
     if pipeline_key == "baseApp":
         return {
             "key": "baseApp",
             "name": "baseApp",
             "type": "baseApp",
-            "root": base_app_root,
-            "target_build": "baseApp",
+            "root": base_app_root_str,
+            "target_build": base_app_root_str,
             "state_file": None,
         }
 

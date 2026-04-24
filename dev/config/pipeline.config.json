@@ -3,7 +3,7 @@
     "repo_root": ".",
     "default_input_json": "scenario1.json",
     "task_template": "dev/config/task_template.txt",
-    "base_app_root": "baseApp",
+    "base_app_root": "apps/baseline/commonApp",
     "scenarios_root": "scenarios",
     "build_root": "build"
   },
