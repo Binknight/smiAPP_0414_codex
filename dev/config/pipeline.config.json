@@ -3,96 +3,89 @@
     "repo_root": ".",
     "default_input_json": "scenario1.json",
     "task_template": "dev/config/task_template.txt",
-    "mock_data_root": "dev/mock-data",
-    "result_root": "dev/output",
-    "logs_root": "dev/logs",
-    "state_root": "dev/state"
+    "base_app_root": "baseApp",
+    "scenarios_root": "scenarios",
+    "build_root": "build"
   },
   "git": {
     "remote_name": "origin",
-    "remote_url": "ssh://git@ssh.github.com:443/Binknight/agentic-sim-app-starter.git",
+    "remote_url": "https://github.com:443/Binknight/agentic-sim-app-starter.git",
     "default_base_branch": "main",
-    "scenario_branch_format": "prod-{app_segment}-app-scenario-{scenario_id}-{timestamp}",
     "scenario_id_padding": 3,
     "fetch_all_known_branches": true,
     "app_types": {
       "generic": {
         "display_name": "通用类APP",
-        "aliases": [
-          "generic",
-          "common",
-          "main",
-          "general"
-        ],
+        "aliases": ["generic", "common", "main", "general"],
         "base_branch": "main",
         "app_segment": "generic"
       },
       "explore": {
         "display_name": "内容类APP",
-        "aliases": [
-          "explore",
-          "content"
-        ],
+        "aliases": ["explore", "content"],
         "base_branch": "prod-explore-app",
         "app_segment": "explore"
       },
       "travel": {
-        "display_name": "旅游类APP",
-        "aliases": [
-          "travel",
-          "trip",
-          "tour"
-        ],
+        "display_name": "出行类APP",
+        "aliases": ["travel", "trip", "tour"],
         "base_branch": "prod-travel-app",
         "app_segment": "travel"
+      },
+      "shopping": {
+        "display_name": "购物类APP",
+        "aliases": ["shopping", "shop", "ecom", "mall", "retail", "store", "buy"],
+        "base_branch": "prod-shopping-app",
+        "app_segment": "shopping"
+      },
+      "delivery": {
+        "display_name": "外卖类APP",
+        "aliases": ["delivery", "waimai", "food-delivery", "takeout", "takeaway", "food"],
+        "base_branch": "prod-delivery-app",
+        "app_segment": "delivery"
       }
     }
   },
   "agent": {
-    "active": "codex_cli",
+    "active": "opencode_cli",
     "definitions": {
       "codex_cli": {
         "display_name": "Codex CLI",
+        "command": ["codex.cmd", "exec", "--yolo", "-"],
+        "env": {},
+        "task_via_stdin": true,
+        "runtime_family": "codex",
+        "supports_resume": false
+      },
+      "opencode_cli": {
+        "display_name": "OpenCode CLI",
         "command": [
-          "codex.cmd",
-          "exec",
-          "--yolo",
-          "-"
+          "opencode.cmd",
+          "run",
+          "--model",
+          "{{OPENCODE_MODEL}}",
+          "请阅读并完整执行 -f 附加文件中的任务说明。",
+          "-f",
+          "{{TASK_PROMPT_FILE}}"
         ],
         "env": {},
+        "task_via_stdin": false,
+        "runtime_family": "opencode",
         "supports_resume": false
       }
     }
   },
   "build": {
-    "command": "powershell -ExecutionPolicy Bypass -File .\\build.ps1",
+    "command": "powershell -ExecutionPolicy Bypass -File .\\build\\build.ps1",
     "readme_reference": "README.md"
   },
   "scheduler": {
     "poll_interval_seconds": 60,
     "max_cycles": 60,
-    "success_values": [
-      "success",
-      "succeeded",
-      "ok",
-      "passed",
-      "true"
-    ],
-    "commit_message_template": "feat: automate {scenario_branch}"
+    "success_values": ["success", "succeeded", "ok", "passed", "true"],
+    "commit_message_template": "feat: automate {pipeline_key}"
   },
   "commit": {
-    "include_paths": [
-      "AppScope",
-      "entry",
-      "hvigor",
-      "dev/spec",
-      "dev/mock-data",
-      "README.md",
-      "build.ps1",
-      "build.bat",
-      "build-profile.json5",
-      "hvigorfile.ts",
-      "oh-package.json5"
-    ]
+    "shared_include_paths": []
   }
 }

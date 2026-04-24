@@ -31,8 +31,12 @@ TERMINAL_STATUSES = {
 }
 
 
+def get_global_logs_root(repo_root: Path) -> Path:
+    return ensure_dir(repo_root / "dev" / "logs")
+
+
 def prepare_logger(repo_root: Path, config: dict[str, Any], suffix: str) -> logging.Logger:
-    logs_root = ensure_dir(resolve_path(repo_root, config["paths"]["logs_root"]))
+    logs_root = get_global_logs_root(repo_root)
     log_file = logs_root / f"monitor-{sanitize_name(suffix)}.log"
     return setup_logger("dev-monitor", log_file)
 
@@ -41,7 +45,7 @@ def get_pipeline_logger(state: dict[str, Any] | None, fallback_name: str) -> log
     if state:
         log_file = state.get("log_file")
         if log_file:
-            logger_key = sanitize_name(str(state.get("scenario_key") or Path(str(log_file)).stem))
+            logger_key = sanitize_name(str(state.get("pipeline_key") or state.get("scenario_key") or Path(str(log_file)).stem))
             return setup_logger(f"pipeline-monitor-{logger_key}", Path(str(log_file)))
     return setup_stream_logger(fallback_name)
 
@@ -49,8 +53,30 @@ def get_pipeline_logger(state: dict[str, Any] | None, fallback_name: str) -> log
 def collect_state_files(repo_root: Path, config: dict[str, Any], state_arg: str | None) -> list[Path]:
     if state_arg:
         return [resolve_path(repo_root, state_arg)]
-    state_root = ensure_dir(resolve_path(repo_root, config["paths"]["state_root"]))
-    return sorted(state_root.glob("*.runtime.json"))
+    scenarios_root = ensure_dir(resolve_path(repo_root, config["paths"]["scenarios_root"]))
+    return sorted(scenarios_root.glob("*/state/*.json"))
+
+
+def build_include_paths(repo_root: Path, state: dict[str, Any], config: dict[str, Any], logger: logging.Logger) -> list[str]:
+    include_paths: list[str] = []
+    pipeline_root = state.get("pipeline_root")
+    if pipeline_root:
+        root_path = Path(str(pipeline_root))
+        try:
+            include_paths.append(str(root_path.relative_to(repo_root)))
+        except ValueError:
+            logger.warning("Pipeline root is outside repo root, skip auto-include: %s", root_path)
+
+    scenario_input = state.get("scenario_input")
+    if scenario_input:
+        input_path = Path(str(scenario_input))
+        try:
+            include_paths.append(str(input_path.relative_to(repo_root)))
+        except ValueError:
+            logger.warning("Scenario input is outside repo root, skip auto-include: %s", input_path)
+
+    include_paths.extend(config.get("commit", {}).get("shared_include_paths", []))
+    return list(dict.fromkeys(include_paths))
 
 
 def commit_and_push(
@@ -60,29 +86,27 @@ def commit_and_push(
     logger: logging.Logger,
     dry_run: bool,
 ) -> None:
-    commit_config = config["commit"]
     scheduler_config = config["scheduler"]
     remote_name = config["git"]["remote_name"]
-    include_paths = list(commit_config["include_paths"])
-    scenario_branch = state["scenario_branch"]
+    include_paths = build_include_paths(repo_root, state, config, logger)
+    branch_name = state.get("branch_name") or state.get("base_branch") or state.get("scenario_branch")
     commit_message = scheduler_config["commit_message_template"].format(
-        scenario_branch=scenario_branch,
-        scenario_id=state["scenario_id"],
-        app_type=state["app_type"],
+        pipeline_key=state.get("pipeline_key") or state.get("scenario_key"),
+        scenario_id=state.get("scenario_id"),
+        app_type=state.get("app_type"),
+        scenario_branch=branch_name,
     )
-    scenario_input = Path(state["scenario_input"])
-    try:
-        include_paths.append(str(scenario_input.relative_to(repo_root)))
-    except ValueError:
-        logger.warning("Scenario input is outside repo root, skip auto-include: %s", scenario_input)
-    include_paths = list(dict.fromkeys(include_paths))
+
+    if not include_paths:
+        logger.info("No whitelisted paths resolved, skip commit.")
+        return
 
     logger.info("Preparing commit for whitelisted paths: %s", ", ".join(include_paths))
     if dry_run:
         logger.info("dry-run mode, skip git add/commit/push.")
         return
 
-    run_command(["git", "checkout", scenario_branch], repo_root, logger)
+    run_command(["git", "checkout", branch_name], repo_root, logger)
     run_command(["git", "add", "--", *include_paths], repo_root, logger)
 
     status_result = run_command(["git", "status", "--short"], repo_root, logger, check=False)
@@ -91,7 +115,7 @@ def commit_and_push(
     else:
         run_command(["git", "commit", "-m", commit_message], repo_root, logger)
 
-    run_command(["git", "push", "-u", remote_name, scenario_branch], repo_root, logger)
+    run_command(["git", "push", "-u", remote_name, branch_name], repo_root, logger)
 
 
 def initialize_inspection(state: dict[str, Any]) -> dict[str, Any]:
@@ -186,7 +210,7 @@ def handle_state_file(
 
     result_json = Path(state["result_json"])
     pid = state.get("agent", {}).get("pid")
-    logger.info("Start inspection for scenario branch: %s", state.get("scenario_branch"))
+    logger.info("Start inspection for pipeline: %s", state.get("pipeline_key") or state.get("scenario_key"))
 
     if state.get("status") == "dry_run":
         state["runtime_ended_at"] = state.get("runtime_ended_at") or now_local_iso()

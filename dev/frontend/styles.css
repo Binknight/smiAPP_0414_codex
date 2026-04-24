@@ -83,7 +83,39 @@ body {
   margin-bottom: 12px;
 }
 
+.selector-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.selector-row label {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.selector-row select {
+  min-width: 220px;
+  max-width: 100%;
+  border: 1px solid var(--panel-border);
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--text);
+  padding: 8px 10px;
+  font: inherit;
+}
+
 .hero-main {
+  min-width: 0;
+}
+
+.hero-title-row {
+  display: flex;
+  align-items: center;
+  gap: 40px;
   min-width: 0;
 }
 
@@ -154,6 +186,10 @@ p {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 10px;
+}
+
+.metric-strip-wide {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
 }
 
 .workspace-row {
@@ -253,6 +289,55 @@ p {
   transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
 }
 
+.artifact-download-button {
+  width: 52px;
+  height: 52px;
+  flex: 0 0 52px;
+  font-weight: 700;
+  border-radius: 12px;
+  color: white;
+  text-decoration: none;
+  border-color: rgba(15, 78, 201, 0.35);
+  background: linear-gradient(135deg, var(--accent-2), var(--accent));
+  box-shadow: 0 16px 28px rgba(15, 78, 201, 0.22);
+  text-align: center;
+  padding: 5px;
+}
+
+.artifact-download-button span {
+  display: block;
+  font-size: 11px;
+  line-height: 1.1;
+  letter-spacing: 0.02em;
+}
+
+.artifact-download-button:hover {
+  color: white;
+  border-color: rgba(15, 78, 201, 0.45);
+  background: linear-gradient(135deg, #1158dd, #10a184);
+  transform: translateY(-1px);
+}
+
+.artifact-download-button:visited {
+  color: white;
+}
+
+.artifact-download-button.icon-button:hover {
+  color: white;
+  border-color: rgba(15, 78, 201, 0.45);
+  background: linear-gradient(135deg, #1158dd, #10a184);
+}
+
+.artifact-download-button.icon-button:focus-visible {
+  outline: 2px solid rgba(15, 78, 201, 0.35);
+  outline-offset: 2px;
+  background: linear-gradient(135deg, var(--accent-2), var(--accent));
+}
+
+.is-hidden {
+  display: none;
+}
+
 .icon-button:hover {
   background: rgba(255, 255, 255, 0.95);
   border-color: rgba(19, 32, 44, 0.3);
@@ -291,7 +376,7 @@ p {
 
 .middle-row {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1.15fr) minmax(280px, 0.9fr);
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 0.8fr) minmax(280px, 0.8fr);
   gap: 12px;
   align-items: stretch;
 }
@@ -303,7 +388,7 @@ p {
 }
 
 .plain-grid {
-  gap: 8px 16px;
+  gap: 6px 14px;
 }
 
 .info-cell-wide {
@@ -312,13 +397,13 @@ p {
 
 .control-meta {
   grid-template-columns: 1fr;
-  gap: 8px;
+  gap: 6px;
 }
 
 .control-meta .info-cell {
   display: grid;
   grid-template-columns: 110px minmax(0, 1fr);
-  gap: 10px;
+  gap: 8px;
   align-items: center;
 }
 
@@ -336,6 +421,7 @@ p {
 
 .compact-card {
   min-height: 0;
+  padding: 12px 14px;
 }
 
 .progress-card,
@@ -344,8 +430,22 @@ p {
   height: 100%;
 }
 
+.compact-card .card-header {
+  margin-bottom: 8px;
+}
+
+.compact-card .card-note {
+  margin-top: 2px;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.compact-card .card-state {
+  font-size: 12px;
+}
+
 .progress-summary {
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .progress-current {
@@ -362,7 +462,7 @@ p {
 
 .progress-track {
   width: 100%;
-  height: 12px;
+  height: 10px;
   border: 1px solid var(--panel-border);
   background: linear-gradient(90deg, rgba(15, 78, 201, 0.08), rgba(13, 138, 114, 0.08));
   overflow: hidden;
@@ -377,17 +477,17 @@ p {
 
 .progress-steps {
   list-style: none;
-  margin: 10px 0 0;
+  margin: 8px 0 0;
   padding: 0;
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 6px;
+  gap: 4px;
   align-items: start;
 }
 
 .progress-step {
   position: relative;
-  min-height: 46px;
+  min-height: 40px;
   padding: 0;
   border: 0;
   background: transparent;
@@ -444,7 +544,7 @@ p {
   display: block;
   width: 14px;
   height: 14px;
-  margin: 0 auto 10px;
+  margin: 0 auto 7px;
   border-radius: 999px;
   border: 1px solid rgba(85, 105, 125, 0.85);
   background:
@@ -480,8 +580,8 @@ p {
   max-width: 84px;
   margin: 0 auto;
   font-weight: 700;
-  line-height: 1.3;
-  font-size: 11px;
+  line-height: 1.2;
+  font-size: 10px;
   text-align: center;
   letter-spacing: 0.03em;
   text-transform: uppercase;
@@ -544,8 +644,8 @@ p {
   grid-template-rows: auto auto auto minmax(0, 1fr);
 }
 .control-actions {
-  margin-top: 12px;
-  padding-top: 12px;
+  margin-top: 10px;
+  padding-top: 10px;
   border-top: 1px solid rgba(159, 176, 192, 0.45);
 }
 
@@ -554,14 +654,14 @@ p {
   border: 0;
   background: var(--danger);
   color: white;
-  padding: 13px 18px;
-  font-size: 15px;
+  padding: 11px 16px;
+  font-size: 14px;
   font-weight: 700;
   cursor: pointer;
 }
 
 .danger button + button {
-  margin-top: 12px;
+  margin-top: 10px;
 }
 
 .danger button:disabled {
@@ -575,11 +675,11 @@ p {
 }
 
 .action-hint {
-  min-height: 28px;
-  margin-top: 10px;
+  min-height: 24px;
+  margin-top: 8px;
   color: var(--muted);
   line-height: 1.5;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .status-running {
@@ -604,11 +704,16 @@ p {
   .progress-steps {
     grid-template-columns: 1fr;
   }
+
+  .hero-title-row {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
 }
 
 @media (max-width: 1280px) {
   .middle-row {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1.5fr) minmax(0, 0.78fr);
   }
 
   .control-card {

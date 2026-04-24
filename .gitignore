@@ -1,9 +1,9 @@
 .deveco-sdk
-build_new.config.json
+build.config.json
 .hvigor
 .idea
 .vscode
-build
+baseApp/**/build/
 local.properties
 node_modules
 *.hap
@@ -17,3 +17,8 @@ node_modules
 __pycache__/
 *.pyc
 .codex-ssh
+tmp/
+# 场景子目录内流水线运行态文件；自动提交会 git add 整个 scenario 树，用忽略规则排除运行产物
+scenarios/**/logs/
+scenarios/**/output/
+scenarios/**/state/

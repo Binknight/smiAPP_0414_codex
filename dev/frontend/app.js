@@ -1,10 +1,13 @@
 const els = {
+  pipelineSelect: document.getElementById("pipeline-select"),
   title: document.getElementById("task-title"),
+  artifactDownloadButton: document.getElementById("artifact-download-button"),
   statusPill: document.getElementById("status-pill"),
   scenarioId: document.getElementById("scenario-id"),
   scenarioQuestion: document.getElementById("scenario-question"),
   appType: document.getElementById("app-type"),
   baseBranch: document.getElementById("base-branch"),
+  branchName: document.getElementById("branch-name"),
   workspace: document.getElementById("workspace"),
   workspaceCopyButton: document.getElementById("workspace-copy-button"),
   agentPid: document.getElementById("agent-pid"),
@@ -36,10 +39,25 @@ const els = {
 };
 
 let latestTask = null;
+let currentPipeline = "baseApp";
 const BEIJING_OFFSET_MINUTES = 8 * 60;
 
 function fmt(value) {
   return value || "-";
+}
+
+function formatBytes(bytes) {
+  const value = Number(bytes);
+  if (!Number.isFinite(value) || value < 0) return "-";
+  if (value < 1024) return `${value} B`;
+  const units = ["KB", "MB", "GB", "TB"];
+  let size = value / 1024;
+  let unitIndex = 0;
+  while (size >= 1024 && unitIndex < units.length - 1) {
+    size /= 1024;
+    unitIndex += 1;
+  }
+  return `${size.toFixed(size >= 10 ? 0 : 1)} ${units[unitIndex]}`;
 }
 
 function formatDisplayTime(value) {
@@ -47,9 +65,7 @@ function formatDisplayTime(value) {
   const text = String(value).trim();
   if (!text) return "-";
   const match = text.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2})(?:[+-]\d{2}:\d{2}|Z)?$/);
-  if (match) {
-    return `${match[1]} ${match[2]}`;
-  }
+  if (match) return `${match[1]} ${match[2]}`;
   return text;
 }
 
@@ -79,7 +95,6 @@ function parseDisplayTimeMs(value) {
     const offsetMinutes = Number(match[8]) * 60 + Number(match[9]);
     return utcMs - sign * offsetMinutes * 60 * 1000;
   }
-
   return utcMs - BEIJING_OFFSET_MINUTES * 60 * 1000;
 }
 
@@ -117,7 +132,6 @@ function getRuntimeEnd(task) {
 
 async function copyToClipboard(text) {
   if (!text || text === "-") return false;
-
   if (navigator.clipboard && navigator.clipboard.writeText) {
     await navigator.clipboard.writeText(text);
     return true;
@@ -136,22 +150,58 @@ async function copyToClipboard(text) {
 }
 
 function classifyStatus(status) {
-  if (["pushed", "completed", "dry_run_success_detected"].includes(status)) return "status-success";
+  if (["pushed", "completed", "dry_run_success_detected", "ready"].includes(status)) return "status-success";
   if (["build_failed", "agent_exited_without_result"].includes(status)) return "status-failed";
   if (status === "cancelled") return "status-cancelled";
   return "status-running";
 }
 
+function renderArtifact(task) {
+  const artifact = task.artifact;
+  if (!artifact || !artifact.downloadUrl) {
+    els.artifactDownloadButton.classList.add("is-hidden");
+    els.artifactDownloadButton.removeAttribute("href");
+    els.artifactDownloadButton.removeAttribute("download");
+    els.artifactDownloadButton.removeAttribute("title");
+    return;
+  }
+
+  els.artifactDownloadButton.classList.remove("is-hidden");
+  els.artifactDownloadButton.href = `${artifact.downloadUrl}`;
+  els.artifactDownloadButton.setAttribute("download", artifact.name || "app.hap");
+  const meta = [artifact.name, formatBytes(artifact.sizeBytes)].filter((part) => part && part !== "-").join(" · ");
+  els.artifactDownloadButton.title = meta || "下载 HAP 安装包";
+}
+
+function renderPipelineOptions(items) {
+  const previous = currentPipeline;
+  els.pipelineSelect.innerHTML = "";
+  items.forEach((item) => {
+    const option = document.createElement("option");
+    option.value = item.key;
+    option.textContent = item.type === "baseApp" ? "baseApp" : `${item.key} (${item.status})`;
+    if (item.key === previous) option.selected = true;
+    els.pipelineSelect.appendChild(option);
+  });
+  if (![...els.pipelineSelect.options].some((option) => option.value === previous) && els.pipelineSelect.options.length > 0) {
+    currentPipeline = els.pipelineSelect.options[0].value;
+  }
+  els.pipelineSelect.value = currentPipeline;
+}
+
 function renderTask(task) {
+  latestTask = task;
   const runtime = task.agent.runtime || {};
-  els.title.textContent = task.scenarioBranch || task.scenarioKey || "当前任务";
+  renderArtifact(task);
+  els.title.textContent = task.pipelineName || task.pipelineKey || "当前任务";
   setText(els.statusPill, task.status);
   els.statusPill.className = `card-state ${classifyStatus(task.status)}`;
-  setText(els.scenarioId, task.scenarioId);
-  setText(els.scenarioQuestion, task.scenarioQuestion);
+  setText(els.scenarioId, task.scenarioId || task.pipelineKey);
+  setText(els.scenarioQuestion, task.scenarioQuestion || task.pipelineRoot || "当前 pipeline 无场景说明");
   setText(els.appType, task.appDisplayName || task.appType);
   setText(els.baseBranch, task.baseBranch);
-  setText(els.workspace, task.agent.workspace || runtime.workspace);
+  setText(els.branchName, task.branchName);
+  setText(els.workspace, task.pipelineRoot || task.agent.workspace || runtime.workspace);
   setText(els.agentPid, task.agent.pid);
   setText(els.startedAt, formatDisplayTime(task.agent.startedAt));
   setText(els.updatedAt, formatDisplayTime(task.updatedAt));
@@ -187,10 +237,10 @@ function renderTask(task) {
   setText(els.inspectionLast, formatDisplayTime(task.inspection.lastCheckedAt));
   setText(els.inspectionMessage, task.inspection.message);
 
-  const terminal = isTerminalStatus(task.status);
+  const terminal = isTerminalStatus(task.status) || task.pipelineType === "baseApp" || task.status === "idle" || task.status === "ready";
   els.terminateButton.disabled = terminal;
   if (terminal) {
-    els.terminateHint.textContent = "当前状态不可再终止。";
+    els.terminateHint.textContent = "当前对象不可终止。";
   }
 }
 
@@ -219,22 +269,31 @@ els.workspaceCopyButton.addEventListener("click", async () => {
   }
 });
 
+async function fetchJson(url, options = {}) {
+  const res = await fetch(url, { cache: "no-store", ...options });
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  return res.json();
+}
+
+async function refreshPipelineList() {
+  const payload = await fetchJson("/api/pipelines");
+  renderPipelineOptions(payload.items || []);
+}
+
 async function refreshLogs() {
-  const res = await fetch("/api/task/current/logs", { cache: "no-store" });
-  const logs = await res.json();
+  const logs = await fetchJson(`/api/pipelines/current/logs?pipeline=${encodeURIComponent(currentPipeline)}`);
   els.pipelineLog.textContent = logs.pipelineLog || "暂无日志";
   els.agentLog.textContent = logs.agentLog || "暂无日志";
 }
 
 async function refreshTask() {
-  const res = await fetch("/api/task/current", { cache: "no-store" });
-  const task = await res.json();
-  latestTask = task;
+  const task = await fetchJson(`/api/pipelines/current?pipeline=${encodeURIComponent(currentPipeline)}`);
   renderTask(task);
 }
 
 async function refreshAll() {
   try {
+    await refreshPipelineList();
     await Promise.all([refreshTask(), refreshLogs()]);
     els.terminateHint.textContent = "";
   } catch (error) {
@@ -242,13 +301,17 @@ async function refreshAll() {
   }
 }
 
+els.pipelineSelect.addEventListener("change", async (event) => {
+  currentPipeline = event.target.value;
+  await refreshAll();
+});
+
 els.terminateButton.addEventListener("click", async () => {
-  const confirmed = window.confirm("确定终止当前 Agent 任务吗？");
+  const confirmed = window.confirm(`确定终止 ${currentPipeline} 的 Agent 任务吗？`);
   if (!confirmed) return;
   els.terminateButton.disabled = true;
   try {
-    const res = await fetch("/api/task/current/terminate", { method: "POST" });
-    const payload = await res.json();
+    const payload = await fetchJson(`/api/pipelines/current/terminate?pipeline=${encodeURIComponent(currentPipeline)}`, { method: "POST" });
     els.terminateHint.textContent = payload.ok ? "终止请求已提交。" : "终止失败。";
     await refreshAll();
   } catch (error) {
@@ -261,10 +324,12 @@ els.shutdownConsoleButton.addEventListener("click", async () => {
   if (!confirmed) return;
   els.shutdownConsoleButton.disabled = true;
   try {
-    const res = await fetch("/api/console/shutdown", { method: "POST" });
-    const payload = await res.json();
+    // 与 terminate 一样必须为 POST，否则走 GET 会得到 404，页面无法进入“已关闭”状态
+    const payload = await fetchJson("/api/console/shutdown", { method: "POST" });
     els.terminateHint.textContent = payload.ok ? "控制台正在关闭。" : "关闭控制台失败。";
     window.setTimeout(() => {
+      window.clearInterval(refreshAllIntervalId);
+      window.clearInterval(refreshRuntimeIntervalId);
       document.body.innerHTML = "<main class=\"shell\"><section class=\"card hero-card\"><div><p class=\"eyebrow\">Console Closed</p><h1>控制台已关闭</h1><p class=\"card-note\">请重新执行 run_pipeline 再次启动 Web 页面。</p></div></section></main>";
     }, 500);
   } catch (error) {
@@ -274,5 +339,5 @@ els.shutdownConsoleButton.addEventListener("click", async () => {
 });
 
 refreshAll();
-window.setInterval(refreshAll, 2000);
-window.setInterval(refreshRuntimeDurationTick, 1000);
+const refreshAllIntervalId = window.setInterval(refreshAll, 3000);
+const refreshRuntimeIntervalId = window.setInterval(refreshRuntimeDurationTick, 1000);
