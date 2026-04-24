@@ -340,26 +340,30 @@ def list_pipeline_summaries(repo_root: Path, config: dict[str, Any]) -> list[dic
     baseline_root, scenarios_root = get_pipeline_roots(repo_root, config)
     baseline_root_str = config["paths"]["baseline_root"]
     items = [build_base_pipeline_summary(baseline_root_str)]
-    for scenario_root in sorted(scenarios_root.iterdir()):
-        if not scenario_root.is_dir():
+    for app_type_dir in sorted(scenarios_root.iterdir()):
+        if not app_type_dir.is_dir():
             continue
-        state_file = get_state_file_for_pipeline(scenario_root)
-        state = load_runtime_state(state_file) if state_file else None
-        tb = scenario_target_build(config, scenario_root.name)
-        items.append(
-            {
-                "key": scenario_root.name,
-                "name": scenario_root.name,
-                "type": "scenario",
-                "targetBuild": tb,
-                "root": str(scenario_root),
-                "status": (state or {}).get("status") or "idle",
-                "branchName": (state or {}).get("baseline_dir"),
-                "updatedAt": format_display_time((state or {}).get("updated_at")),
-                "hasState": bool(state),
-                "hasArtifact": bool(build_artifact_payload(tb, state, (state or {}).get("result_payload"), scenario_root.name)),
-            }
-        )
+        for scenario_root in sorted(app_type_dir.iterdir()):
+            if not scenario_root.is_dir():
+                continue
+            scenario_key = f"{app_type_dir.name}/{scenario_root.name}"
+            state_file = get_state_file_for_pipeline(scenario_root)
+            state = load_runtime_state(state_file) if state_file else None
+            tb = scenario_target_build(config, scenario_key)
+            items.append(
+                {
+                    "key": scenario_key,
+                    "name": scenario_key,
+                    "type": "scenario",
+                    "targetBuild": tb,
+                    "root": str(scenario_root),
+                    "status": (state or {}).get("status") or "idle",
+                    "branchName": (state or {}).get("baseline_dir"),
+                    "updatedAt": format_display_time((state or {}).get("updated_at")),
+                    "hasState": bool(state),
+                    "hasArtifact": bool(build_artifact_payload(tb, state, (state or {}).get("result_payload"), scenario_key)),
+                }
+            )
     return items
 
 

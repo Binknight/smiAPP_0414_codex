@@ -54,7 +54,7 @@ def collect_state_files(repo_root: Path, config: dict[str, Any], state_arg: str 
     if state_arg:
         return [resolve_path(repo_root, state_arg)]
     scenarios_root = ensure_dir(resolve_path(repo_root, config["paths"]["scenarios_root"]))
-    return sorted(scenarios_root.glob("*/state/*.json"))
+    return sorted(scenarios_root.glob("*/*/state/*.json"))
 
 
 def build_include_paths(repo_root: Path, state: dict[str, Any], config: dict[str, Any], logger: logging.Logger) -> list[str]:

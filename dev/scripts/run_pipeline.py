@@ -87,7 +87,7 @@ def prepare_scenario_root(
     if not baseline_dir.exists():
         raise FileNotFoundError(f"基线 APP 目录不存在: {baseline_dir}")
     scenarios_root = get_scenarios_root(repo_root, config)
-    scenario_root = scenarios_root / scenario_dir_name
+    scenario_root = scenarios_root / app_key / scenario_dir_name
 
     if scenario_root.exists() and (scenario_root / "entry").exists():
         logger.info("复用现有场景目录: %s", scenario_root)
@@ -410,7 +410,8 @@ def main() -> int:
     app_key, app_info = normalize_app_key(config, raw_app)
     scenario_id = args.scenario_id or infer_scenario_id(input_path, int(config["git"].get("scenario_id_padding", 3)))
     scenario_dir_name = normalize_scenario_dir_name(scenario_id)
-    scenario_root = get_scenarios_root(repo_root, config) / scenario_dir_name
+    pipeline_key = f"{app_key}/{scenario_dir_name}"
+    scenario_root = get_scenarios_root(repo_root, config) / app_key / scenario_dir_name
     state_file = scenario_root / "state" / "runtime.json"
     existing_state = load_runtime_state(state_file)
     bootstrap_logger = setup_logger("dev-bootstrap", ensure_dir(repo_root / "tmp") / "bootstrap.log")
@@ -447,7 +448,7 @@ def main() -> int:
     template_text = read_text(template_path)
     build_command = config["build"]["command"]
     scenarios_root_posix = config["paths"]["scenarios_root"].replace("\\", "/")
-    build_target = f"{scenarios_root_posix}/{scenario_dir_name}"
+    build_target = f"{scenarios_root_posix}/{app_key}/{scenario_dir_name}"
     prompt_variables = build_prompt_variables(
         input_path=input_path,
         scenario_payload=scenario_payload,
@@ -467,13 +468,13 @@ def main() -> int:
     task_started_at = now_local_iso()
     state = initialize_inspection(
         {
-            "pipeline_key": scenario_dir_name,
+            "pipeline_key": pipeline_key,
             "pipeline_type": "scenario",
-            "pipeline_name": scenario_dir_name,
+            "pipeline_name": pipeline_key,
             "pipeline_root": str(scenario_root),
             "target_build": build_target,
             "scenario_id": scenario_id,
-            "scenario_key": scenario_dir_name,
+            "scenario_key": pipeline_key,
             "scenario_input": str(input_path),
             "scenario_question": scenario_question,
             "app_type": app_key,
@@ -524,13 +525,13 @@ def main() -> int:
     update_runtime_state(state_file, state, logger)
 
     if not args.no_web:
-        start_web_console(repo_root, config_path, config, scenario_dir_name, logger, args.dry_run)
+        start_web_console(repo_root, config_path, config, pipeline_key, logger, args.dry_run)
         web_url = wait_log_web_url(state_file, logger)
         if web_url:
             logger.info("Web 控制台已就绪，访问地址: %s", web_url)
         else:
             scenarios_root = resolve_path(repo_root, config["paths"]["scenarios_root"])
-            web_log = scenarios_root / scenario_dir_name / "logs" / "web-console.log"
+            web_log = scenarios_root / pipeline_key / "logs" / "web-console.log"
             logger.warning(
                 "Web 子进程在数秒内未把访问地址写入状态文件。请打开日志排查: %s 或见 %s 中的 web 字段。",
                 web_log,
