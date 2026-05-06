@@ -1,0 +1,400 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 2000" width="1400" height="2000">
+  <defs>
+    <!-- Background Grid -->
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1a2332" stroke-width="0.5" opacity="0.6"/>
+    </pattern>
+    <pattern id="dotgrid" width="20" height="20" patternUnits="userSpaceOnUse">
+      <circle cx="10" cy="10" r="1" fill="#1e2d3d" opacity="0.5"/>
+    </pattern>
+
+    <!-- Glow Filters -->
+    <filter id="glowCyan" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feFlood flood-color="#00f0ff" flood-opacity="0.3"/>
+      <feComposite in2="blur" operator="in"/>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glowMagenta" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feFlood flood-color="#ff2d95" flood-opacity="0.3"/>
+      <feComposite in2="blur" operator="in"/>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glowGreen" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feFlood flood-color="#00ff88" flood-opacity="0.3"/>
+      <feComposite in2="blur" operator="in"/>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glowAmber" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feFlood flood-color="#ffb800" flood-opacity="0.25"/>
+      <feComposite in2="blur" operator="in"/>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glowWhite" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feFlood flood-color="#ffffff" flood-opacity="0.15"/>
+      <feComposite in2="blur" operator="in"/>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="shadowBox" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="0" stdDeviation="8" flood-color="#000000" flood-opacity="0.6"/>
+    </filter>
+
+    <!-- Gradients -->
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0a0e17"/>
+      <stop offset="50%" stop-color="#0d1520"/>
+      <stop offset="100%" stop-color="#0a0e17"/>
+    </linearGradient>
+    <linearGradient id="cyanGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#00b8d4"/>
+      <stop offset="100%" stop-color="#00f0ff"/>
+    </linearGradient>
+    <linearGradient id="magentaGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#d63384"/>
+      <stop offset="100%" stop-color="#ff2d95"/>
+    </linearGradient>
+    <linearGradient id="greenGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#00a86b"/>
+      <stop offset="100%" stop-color="#00ff88"/>
+    </linearGradient>
+    <linearGradient id="amberGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#e67700"/>
+      <stop offset="100%" stop-color="#ffb800"/>
+    </linearGradient>
+    <linearGradient id="arrowCyan" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#00f0ff"/>
+      <stop offset="100%" stop-color="#00b8d4" stop-opacity="0.3"/>
+    </linearGradient>
+
+    <!-- Arrow Markers -->
+    <marker id="arrowC" viewBox="0 0 10 10" refX="5" refY="10" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 0 L 5 10 L 10 0" fill="#00f0ff" opacity="0.8"/>
+    </marker>
+    <marker id="arrowM" viewBox="0 0 10 10" refX="5" refY="10" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 0 L 5 10 L 10 0" fill="#ff2d95" opacity="0.8"/>
+    </marker>
+    <marker id="arrowG" viewBox="0 0 10 10" refX="5" refY="10" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 0 L 5 10 L 10 0" fill="#00ff88" opacity="0.8"/>
+    </marker>
+    <marker id="arrowA" viewBox="0 0 10 10" refX="5" refY="10" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 0 L 5 10 L 10 0" fill="#ffb800" opacity="0.8"/>
+    </marker>
+
+    <!-- Connection Line Gradient -->
+    <linearGradient id="lineFlow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#00f0ff" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#00f0ff" stop-opacity="0.1"/>
+    </linearGradient>
+  </defs>
+
+  <!-- BACKGROUND -->
+  <rect width="1400" height="2000" fill="url(#bgGrad)"/>
+  <rect width="1400" height="2000" fill="url(#dotgrid)"/>
+  <rect width="1400" height="2000" fill="url(#grid)"/>
+
+  <!-- Decorative Line Top-Left -->
+  <line x1="0" y1="0" x2="300" y2="0" stroke="#00f0ff" stroke-width="0.5" opacity="0.3"/>
+  <line x1="0" y1="0" x2="0" y2="300" stroke="#00f0ff" stroke-width="0.5" opacity="0.3"/>
+
+  <!-- TITLE SECTION -->
+  <text x="700" y="70" text-anchor="middle" font-family="Consolas, Menlo, monospace" font-size="32" font-weight="bold" fill="#ffffff" filter="url(#glowWhite)">SimApp 仿真 APP 自动化生成系统</text>
+  <text x="700" y="105" text-anchor="middle" font-family="Consolas, Menlo, monospace" font-size="15" fill="#5a7a9a" letter-spacing="3">HARMONYOS ARKTS · AI-DRIVEN · CLOSED-LOOP VERIFICATION</text>
+  <line x1="350" y1="125" x2="1050" y2="125" stroke="#1a3045" stroke-width="1"/>
+  <line x1="500" y1="128" x2="900" y2="128" stroke="#00f0ff" stroke-width="1" opacity="0.3"/>
+
+  <!-- ============================================================ -->
+  <!-- LAYER 0: INPUT -->
+  <!-- ============================================================ -->
+  <rect x="480" y="160" width="440" height="90" rx="8" fill="#0d1a24" stroke="#00f0ff" stroke-width="1" opacity="0.9" filter="url(#shadowBox)"/>
+  <rect x="480" y="160" width="440" height="90" rx="8" fill="none" stroke="#00f0ff" stroke-width="1.5" opacity="0.4" filter="url(#glowCyan)"/>
+  <rect x="480" y="160" width="440" height="4" rx="2" fill="url(#cyanGrad)"/>
+  <text x="700" y="190" text-anchor="middle" font-family="Consolas, monospace" font-size="16" font-weight="bold" fill="#00f0ff">📋 Scenario JSON Input</text>
+  <text x="700" y="215" text-anchor="middle" font-family="Consolas, monospace" font-size="12" fill="#7a8fa0">app · question · exception · flow · exception_type · exception_reason</text>
+  <text x="700" y="235" text-anchor="middle" font-family="Consolas, monospace" font-size="11" fill="#4a6070">scenario1.json → run_pipeline.py --input scenario1.json</text>
+
+  <!-- L0 → L1 Connections -->
+  <line x1="700" y1="250" x2="700" y2="290" stroke="#00f0ff" stroke-width="1.5" opacity="0.4" stroke-dasharray="6,3"/>
+  <line x1="550" y1="250" x2="550" y2="290" stroke="#00b8d4" stroke-width="1" opacity="0.25" stroke-dasharray="4,4"/>
+  <line x1="850" y1="250" x2="850" y2="290" stroke="#00b8d4" stroke-width="1" opacity="0.25" stroke-dasharray="4,4"/>
+
+  <!-- ============================================================ -->
+  <!-- LAYER 1: ORCHESTRATOR (run_pipeline.py) -->
+  <!-- ============================================================ -->
+  <rect x="440" y="300" width="520" height="180" rx="10" fill="#0d1a27" stroke="#00b8d4" stroke-width="1.5" opacity="0.95" filter="url(#shadowBox)"/>
+  <rect x="440" y="300" width="520" height="180" rx="10" fill="none" stroke="#00b8d4" stroke-width="1" opacity="0.3" filter="url(#glowCyan)"/>
+  <rect x="440" y="300" width="520" height="3" rx="1.5" fill="url(#cyanGrad)"/>
+
+  <text x="700" y="325" text-anchor="middle" font-family="Consolas, monospace" font-size="17" font-weight="bold" fill="#00e5ff">⚙  Pipeline Orchestrator</text>
+  <text x="700" y="345" text-anchor="middle" font-family="Consolas, monospace" font-size="11" fill="#5a7a90">dev/scripts/run_pipeline.py</text>
+
+  <!-- Orchestrator Sub-boxes -->
+  <rect x="460" y="360" width="150" height="50" rx="5" fill="#0f1e2e" stroke="#00b8d4" stroke-width="0.8" opacity="0.7"/>
+  <text x="535" y="380" text-anchor="middle" font-family="Consolas, monospace" font-size="11" fill="#00d4e0">app 字段解析</text>
+  <text x="535" y="398" text-anchor="middle" font-family="Consolas, monospace" font-size="10" fill="#5a7a90">normalize_app_key()</text>
+
+  <rect x="625" y="360" width="150" height="50" rx="5" fill="#0f1e2e" stroke="#00b8d4" stroke-width="0.8" opacity="0.7"/>
+  <text x="700" y="380" text-anchor="middle" font-family="Consolas, monospace" font-size="11" fill="#00d4e0">基线工程拷贝</text>
+  <text x="700" y="398" text-anchor="middle" font-family="Consolas, monospace" font-size="10" fill="#5a7a90">prepare_scenario_root()</text>
+
+  <rect x="790" y="360" width="150" height="50" rx="5" fill="#0f1e2e" stroke="#00b8d4" stroke-width="0.8" opacity="0.7"/>
+  <text x="865" y="380" text-anchor="middle" font-family="Consolas, monospace" font-size="11" fill="#00d4e0">Prompt 模板渲染</text>
+  <text x="865" y="398" text-anchor="middle" font-family="Consolas, monospace" font-size="10" fill="#5a7a90">render_template()</text>
+
+  <rect x="540" y="420" width="320" height="48" rx="5" fill="#0a1620" stroke="#00b8d4" stroke-width="0.8" stroke-dasharray="3,2" opacity="0.7"/>
+  <text x="700" y="440" text-anchor="middle" font-family="Consolas, monospace" font-size="11" fill="#00d4e0">Task Template (task_template.txt)</text>
+  <text x="700" y="458" text-anchor="middle" font-family="Consolas, monospace" font-size="10" fill="#4a6070">{{INPUT_JSON_CONTENT}} · {{APP_TYPE}} · {{SCENARIO_ROOT}} · {{BUILD_COMMAND}} ...</text>
+
+  <!-- L1 branching to L2 (Skill) and right side -->
+  <line x1="700" y1="480" x2="700" y2="540" stroke="#00f0ff" stroke-width="2" opacity="0.5" stroke-dasharray="8,4" marker-end="url(#arrowC)"/>
+
+  <!-- ============================================================ -->
+  <!-- LAYER 2: SKILL SYSTEM (left expanded) -->
+  <!-- ============================================================ -->
+  <rect x="140" y="555" width="1120" height="270" rx="12" fill="#120d22" stroke="#ff2d95" stroke-width="1.5" opacity="0.95" filter="url(#shadowBox)"/>
+  <rect x="140" y="555" width="1120" height="270" rx="12" fill="none" stroke="#ff2d95" stroke-width="1" opacity="0.25" filter="url(#glowMagenta)"/>
+  <rect x="140" y="555" width="1120" height="3" rx="1.5" fill="url(#magentaGrad)"/>
+
+  <text x="700" y="585" text-anchor="middle" font-family="Consolas, monospace" font-size="17" font-weight="bold" fill="#ff4da6">🧠  Skill 系统 — 场景 Spec 自动化生成</text>
+  <text x="700" y="605" text-anchor="middle" font-family="Consolas, monospace" font-size="11" fill="#8a5a7a">skills/simapp-scenario-spec-gen/</text>
+
+  <!-- Step 1: Collect -->
+  <rect x="170" y="625" width="245" height="80" rx="6" fill="#140d20" stroke="#d63384" stroke-width="0.8"/>
+  <rect x="170" y="625" width="245" height="2" rx="1" fill="url(#magentaGrad)" opacity="0.5"/>
+  <text x="292" y="648" text-anchor="middle" font-family="Consolas, monospace" font-size="13" font-weight="bold" fill="#ff4da6">Step 1 收集场景证据</text>
+  <text x="292" y="668" text-anchor="middle" font-family="Consolas, monospace" font-size="10" fill="#8a5a7a">提取 question / exception / flow</text>
+  <text x="292" y="685" text-anchor="middle" font-family="Consolas, monospace" font-size="10" fill="#8a5a7a">字段缺失时从 question 推断</text>
+  <text x="292" y="700" text-anchor="middle" font-family="Consolas, monospace" font-size="9" fill="#5a3a5a">checklist.md 保障提取一致性</text>
+
+  <!-- Arrow 1→2 -->
+  <text x="430" y="670" text-anchor="middle" font-family="Consolas, monospace" font-size="18" fill="#ff2d95" opacity="0.5">→</text>
+
+  <!-- Step 2: Reconstruct -->
+  <rect x="450" y="625" width="245" height="80" rx="6" fill="#140d20" stroke="#d63384" stroke-width="0.8"/>
+  <rect x="450" y="625" width="245" height="2" rx="1" fill="url(#magentaGrad)" opacity="0.5"/>
+  <text x="572" y="648" text-anchor="middle" font-family="Consolas, monospace" font-size="13" font-weight="bold" fill="#ff4da6">Step 2 重建目标场景</text>
+  <text x="572" y="668" text-anchor="middle" font-family="Consolas, monospace" font-size="10" fill="#8a5a7a">识别模块 / 页面 / 交互流程</text>
+  <text x="572" y="685" text-anchor="middle" font-family="Consolas, monospace" font-size="10" fill="#8a5a7a">标注确认 vs 模糊 vs 未知</text>
+  <text x="572" y="700" text-anchor="middle" font-family="Consolas, monospace" font-size="9" fill="#5a3a5a">不编造细节 · 保留开放问题</text>
+
+  <!-- Arrow 2→3 -->
+  <text x="710" y="670" text-anchor="middle" font-family="Consolas, monospace" font-size="18" fill="#ff2d95" opacity="0.5">→</text>
+
+  <!-- Step 3: Diff -->
+  <rect x="730" y="625" width="245" height="80" rx="6" fill="#140d20" stroke="#d63384" stroke-width="0.8"/>
+  <rect x="730" y="625" width="245" height="2" rx="1" fill="url(#magentaGrad)" opacity="0.5"/>
+  <text x="852" y="648" text-anchor="middle" font-family="Consolas, monospace" font-size="13" font-weight="bold" fill="#ff4da6">Step 3 框架差距分析</text>
+  <text x="852" y="668" text-anchor="middle" font-family="Consolas, monospace" font-size="10" fill="#8a5a7a">vs framework-baseline.md</text>
+  <text x="852" y="685" text-anchor="middle" font-family="Consolas, monospace" font-size="10" fill="#8a5a7a">already / modify / new / blocked</text>
+  <text x="852" y="700" text-anchor="middle" font-family="Consolas, monospace" font-size="9" fill="#5a3a5a">增量方案优先 · 锚定已有文件</text>
+
+  <!-- Arrow 3→4 -->
+  <text x="990" y="670" text-anchor="middle" font-family="Consolas, monospace" font-size="18" fill="#ff2d95" opacity="0.5">→</text>
+
+  <!-- Step 4: Output -->
+  <rect x="1010" y="625" width="220" height="80" rx="6" fill="#140d20" stroke="#d63384" stroke-width="0.8"/>
+  <rect x="1010" y="625" width="220" height="2" rx="1" fill="url(#magentaGrad)" opacity="0.5"/>
+  <text x="1120" y="648" text-anchor="middle" font-family="Consolas, monospace" font-size="13" font-weight="bold" fill="#ff4da6">Step 4-5 输出 Spec</text>
+  <text x="1120" y="668" text-anchor="middle" font-family="Consolas, monospace" font-size="10" fill="#8a5a7a">spec-template.md 固定结构</text>
+  <text x="1120" y="685" text-anchor="middle" font-family="Consolas, monospace" font-size="10" fill="#8a5a7a">10 章节 · 增量开发计划</text>
+  <text x="1120" y="700" text-anchor="middle" font-family="Consolas, monospace" font-size="9" fill="#5a3a5a">自动落盘 spec/*.spec.md</text>
+
+  <!-- Bottom: Output artifacts -->
+  <rect x="250" y="730" width="900" height="55" rx="6" fill="#0d1620" stroke="#ff2d95" stroke-width="0.8" stroke-dasharray="4,2" opacity="0.7"/>
+  <text x="700" y="752" text-anchor="middle" font-family="Consolas, monospace" font-size="11" fill="#ff4da6">Spec 输出目录: apps/scenarios/{appType}/scenarioXXX/spec/scenarioN.spec.md</text>
+  <text x="700" y="772" text-anchor="middle" font-family="Consolas, monospace" font-size="10" fill="#6a4a7a">§1 元信息 · §2 场景摘要 · §3 证据清单 · §4 产品流程 · §5 UI规格 · §6 差距分析 · §7 开发计划 · §8 测试策略 · §9 验收标准 · §10 假设</text>
+
+  <!-- Skill → Agent connection -->
+  <line x1="700" y1="825" x2="700" y2="880" stroke="#ff2d95" stroke-width="1.5" opacity="0.4" stroke-dasharray="6,3"/>
+  <text x="715" y="858" text-anchor="start" font-family="Consolas, monospace" font-size="10" fill="#ff2d95" opacity="0.5">spec 生成完成后 → Agent 接管开发</text>
+
+  <!-- ============================================================ -->
+  <!-- LAYER 3: AGENT SYSTEM -->
+  <!-- ============================================================ -->
+  <rect x="140" y="890" width="1120" height="210" rx="12" fill="#0d1a20" stroke="#00ff88" stroke-width="1.5" opacity="0.95" filter="url(#shadowBox)"/>
+  <rect x="140" y="890" width="1120" height="210" rx="12" fill="none" stroke="#00ff88" stroke-width="1" opacity="0.25" filter="url(#glowGreen)"/>
+  <rect x="140" y="890" width="1120" height="3" rx="1.5" fill="url(#greenGrad)"/>
+
+  <text x="700" y="920" text-anchor="middle" font-family="Consolas, monospace" font-size="17" font-weight="bold" fill="#33ff99">🤖  Agent 适配层 — 可扩展多 Agent 架构</text>
+  <text x="700" y="940" text-anchor="middle" font-family="Consolas, monospace" font-size="11" fill="#4a7a6a">pipeline.config.json → agent.definitions</text>
+
+  <!-- Agent Box 1: Codex CLI -->
+  <rect x="170" y="960" width="310" height="60" rx="6" fill="#0d1a16" stroke="#00a86b" stroke-width="1"/>
+  <rect x="170" y="960" width="310" height="2" rx="1" fill="url(#greenGrad)" opacity="0.5"/>
+  <text x="325" y="983" text-anchor="middle" font-family="Consolas, monospace" font-size="14" font-weight="bold" fill="#33ff99">Codex CLI</text>
+  <text x="325" y="1003" text-anchor="middle" font-family="Consolas, monospace" font-size="10" fill="#4a7a6a">codex.cmd exec --yolo - （stdin模式）</text>
+  <text x="325" y="1016" text-anchor="middle" font-family="Consolas, monospace" font-size="9" fill="#3a5a4a">task_via_stdin: true · runtime_family: codex</text>
+
+  <!-- Agent Box 2: OpenCode CLI (Active) -->
+  <rect x="545" y="950" width="310" height="75" rx="6" fill="#0d1a16" stroke="#00ff88" stroke-width="2"/>
+  <rect x="545" y="950" width="310" height="3" rx="1.5" fill="url(#greenGrad)"/>
+  <text x="700" y="970" text-anchor="middle" font-family="Consolas, monospace" font-size="12" font-weight="bold" fill="#00ff88">🟢 OpenCode CLI (ACTIVE)</text>
+  <text x="700" y="993" text-anchor="middle" font-family="Consolas, monospace" font-size="10" fill="#4a7a6a">opencode.cmd run --model {{MODEL}} -f {{TASK_PROMPT_FILE}}</text>
+  <text x="700" y="1013" text-anchor="middle" font-family="Consolas, monospace" font-size="9" fill="#3a5a4a">task_via_stdin: false · runtime_family: opencode · -f 文件模式</text>
+
+  <!-- Agent Box 3: Extensible -->
+  <rect x="920" y="960" width="310" height="60" rx="6" fill="#0d1a16" stroke="#00a86b" stroke-width="1" stroke-dasharray="4,2"/>
+  <rect x="920" y="960" width="310" height="2" rx="1" fill="url(#greenGrad)" opacity="0.3"/>
+  <text x="1075" y="983" text-anchor="middle" font-family="Consolas, monospace" font-size="14" font-weight="bold" fill="#33ff99">＋ Custom Agent</text>
+  <text x="1075" y="1003" text-anchor="middle" font-family="Consolas, monospace" font-size="10" fill="#4a7a6a">可扩展: 定义 command + env + runtime_family</text>
+  <text x="1075" y="1016" text-anchor="middle" font-family="Consolas, monospace" font-size="9" fill="#3a5a4a">只需在 pipeline.config.json 注册即可</text>
+
+  <!-- Agent Runtime Info -->
+  <rect x="250" y="1045" width="900" height="40" rx="5" fill="#0a1420" stroke="#00a86b" stroke-width="0.6" opacity="0.6"/>
+  <text x="700" y="1062" text-anchor="middle" font-family="Consolas, monospace" font-size="10" fill="#5a8a70">Runtime 统一抽象: workspace · model · provider · approval_policy · sandbox_mode · reasoning_effort · session_id</text>
+  <text x="700" y="1077" text-anchor="middle" font-family="Consolas, monospace" font-size="9" fill="#3a5a4a">通过 subprocess.Popen 启动，stdout/stderr 统一重定向到 agent-{scenario}-{timestamp}.log</text>
+
+  <!-- Agent → Scenario Workspace -->
+  <line x1="700" y1="1100" x2="700" y2="1145" stroke="#00ff88" stroke-width="2" opacity="0.5" stroke-dasharray="8,4" marker-end="url(#arrowG)"/>
+
+  <!-- ============================================================ -->
+  <!-- LAYER 4: SCENARIO WORKSPACE (Development) -->
+  <!-- ============================================================ -->
+  <rect x="140" y="1155" width="1120" height="195" rx="12" fill="#0d1a24" stroke="#ffb800" stroke-width="1.5" opacity="0.95" filter="url(#shadowBox)"/>
+  <rect x="140" y="1155" width="1120" height="195" rx="12" fill="none" stroke="#ffb800" stroke-width="1" opacity="0.25" filter="url(#glowAmber)"/>
+  <rect x="140" y="1155" width="1120" height="3" rx="1.5" fill="url(#amberGrad)"/>
+
+  <text x="700" y="1185" text-anchor="middle" font-family="Consolas, monospace" font-size="17" font-weight="bold" fill="#ffcc00">🏗  Scenario Workspace — 基于 ArkTS 的 APP 增量开发</text>
+  <text x="700" y="1205" text-anchor="middle" font-family="Consolas, monospace" font-size="11" fill="#8a7a4a">apps/scenarios/{appType}/scenarioXXX/</text>
+
+  <!-- Workspace structure boxes -->
+  <rect x="160" y="1220" width="200" height="55" rx="5" fill="#1a1a0d" stroke="#e67700" stroke-width="0.8"/>
+  <text x="260" y="1242" text-anchor="middle" font-family="Consolas, monospace" font-size="12" fill="#ffcc00">📄 spec/</text>
+  <text x="260" y="1262" text-anchor="middle" font-family="Consolas, monospace" font-size="10" fill="#8a7a4a">scenarioN.spec.md</text>
+
+  <rect x="380" y="1220" width="200" height="55" rx="5" fill="#1a1a0d" stroke="#e67700" stroke-width="0.8"/>
+  <text x="480" y="1242" text-anchor="middle" font-family="Consolas, monospace" font-size="12" fill="#ffcc00">📦 mock-data/</text>
+  <text x="480" y="1262" text-anchor="middle" font-family="Consolas, monospace" font-size="10" fill="#8a7a4a">独立 JSON 数据文件</text>
+
+  <rect x="600" y="1220" width="200" height="55" rx="5" fill="#1a1a0d" stroke="#e67700" stroke-width="0.8"/>
+  <text x="700" y="1242" text-anchor="middle" font-family="Consolas, monospace" font-size="12" fill="#ffcc00">🖥  entry/src/main/ets/</text>
+  <text x="700" y="1262" text-anchor="middle" font-family="Consolas, monospace" font-size="10" fill="#8a7a4a">Index.ets · models/ · mock/</text>
+
+  <rect x="820" y="1220" width="200" height="55" rx="5" fill="#1a1a0d" stroke="#e67700" stroke-width="0.8"/>
+  <text x="920" y="1242" text-anchor="middle" font-family="Consolas, monospace" font-size="12" fill="#ffcc00">📊 output/</text>
+  <text x="920" y="1262" text-anchor="middle" font-family="Consolas, monospace" font-size="10" fill="#8a7a4a">result.json</text>
+
+  <rect x="1040" y="1220" width="200" height="55" rx="5" fill="#1a1a0d" stroke="#e67700" stroke-width="0.8"/>
+  <text x="1140" y="1242" text-anchor="middle" font-family="Consolas, monospace" font-size="12" fill="#ffcc00">📝 logs/ + state/</text>
+  <text x="1140" y="1262" text-anchor="middle" font-family="Consolas, monospace" font-size="10" fill="#8a7a4a">runtime.json</text>
+
+  <!-- Boundary constraint hint -->
+  <rect x="340" y="1290" width="720" height="38" rx="4" fill="#0d1620" stroke="#ffb800" stroke-width="0.6" stroke-dasharray="3,2" opacity="0.6"/>
+  <text x="700" y="1310" text-anchor="middle" font-family="Consolas, monospace" font-size="10" fill="#ffcc00">⛔ 安全边界: Agent 只能修改 SCENARIO_ROOT 内文件 · 基线 / build / dev 目录只读保护</text>
+  <text x="700" y="1324" text-anchor="middle" font-family="Consolas, monospace" font-size="9" fill="#6a5a2a">越界修改 = 任务失败 · 必须在 result.json 中明确列出越界路径</text>
+
+  <!-- Workspace → Build -->
+  <line x1="700" y1="1350" x2="700" y2="1395" stroke="#ffb800" stroke-width="2" opacity="0.5" stroke-dasharray="8,4" marker-end="url(#arrowA)"/>
+
+  <!-- ============================================================ -->
+  <!-- LAYER 5: BUILD & VERIFY (Closed Loop) -->
+  <!-- ============================================================ -->
+  <rect x="140" y="1405" width="1120" height="200" rx="12" fill="#0d1a20" stroke="#00f0ff" stroke-width="2" opacity="0.95" filter="url(#shadowBox)"/>
+  <rect x="140" y="1405" width="1120" height="200" rx="12" fill="none" stroke="#00f0ff" stroke-width="0.8" opacity="0.3" filter="url(#glowCyan)"/>
+  <rect x="140" y="1405" width="1120" height="3" rx="1.5" fill="url(#cyanGrad)"/>
+
+  <text x="700" y="1435" text-anchor="middle" font-family="Consolas, monospace" font-size="17" font-weight="bold" fill="#00e5ff">🔒 自验证闭环 — HarmonyOS ArkTS 构建验证</text>
+  <text x="700" y="1455" text-anchor="middle" font-family="Consolas, monospace" font-size="11" fill="#5a7a90">Spec → Code → Mock Data → Build → HAP → result.json</text>
+
+  <!-- Build Step 1 -->
+  <rect x="160" y="1475" width="210" height="50" rx="5" fill="#0d1a24" stroke="#00b8d4" stroke-width="0.8"/>
+  <text x="265" y="1496" text-anchor="middle" font-family="Consolas, monospace" font-size="12" fill="#00e5ff">build.ps1 -Target</text>
+  <text x="265" y="1514" text-anchor="middle" font-family="Consolas, monospace" font-size="10" fill="#5a7a90">PowerShell 构建入口</text>
+
+  <text x="385" y="1502" text-anchor="middle" font-family="Consolas, monospace" font-size="16" fill="#00b8d4" opacity="0.5">→</text>
+
+  <!-- Build Step 2 -->
+  <rect x="410" y="1475" width="210" height="50" rx="5" fill="#0d1a24" stroke="#00b8d4" stroke-width="0.8"/>
+  <text x="515" y="1496" text-anchor="middle" font-family="Consolas, monospace" font-size="12" fill="#00e5ff">hvigor assembleHap</text>
+  <text x="515" y="1514" text-anchor="middle" font-family="Consolas, monospace" font-size="10" fill="#5a7a90">HarmonyOS 官方构建工具</text>
+
+  <text x="635" y="1502" text-anchor="middle" font-family="Consolas, monospace" font-size="16" fill="#00b8d4" opacity="0.5">→</text>
+
+  <!-- Build Step 3 -->
+  <rect x="660" y="1475" width="210" height="50" rx="5" fill="#0d1a24" stroke="#00f0ff" stroke-width="1.2"/>
+  <text x="765" y="1496" text-anchor="middle" font-family="Consolas, monospace" font-size="12" fill="#00f0ff">*.hap Artifact</text>
+  <text x="765" y="1514" text-anchor="middle" font-family="Consolas, monospace" font-size="10" fill="#5a7a90">entry-default-unsigned.hap</text>
+
+  <text x="885" y="1502" text-anchor="middle" font-family="Consolas, monospace" font-size="16" fill="#00b8d4" opacity="0.5">→</text>
+
+  <!-- Build Step 4 -->
+  <rect x="910" y="1475" width="210" height="50" rx="5" fill="#0d1a24" stroke="#00b8d4" stroke-width="0.8"/>
+  <text x="1015" y="1496" text-anchor="middle" font-family="Consolas, monospace" font-size="12" fill="#00e5ff">result.json</text>
+  <text x="1015" y="1514" text-anchor="middle" font-family="Consolas, monospace" font-size="10" fill="#5a7a90">buildStatus · artifactPath · ...</text>
+
+  <!-- Closed Loop Feedback Arrow (right side curved) -->
+  <path d="M 1240 1500 Q 1310 1500 1310 1400 Q 1310 1300 1310 1200 Q 1310 1120 1240 1120" fill="none" stroke="#00f0ff" stroke-width="1.5" opacity="0.4" stroke-dasharray="6,3" marker-end="url(#arrowC)"/>
+  <text x="1330" y="1310" text-anchor="middle" font-family="Consolas, monospace" font-size="10" fill="#00f0ff" opacity="0.5" transform="rotate(90 1330 1310)">反馈循环</text>
+
+  <!-- Closed Loop bottom text -->
+  <rect x="340" y="1545" width="720" height="38" rx="20" fill="none" stroke="#00f0ff" stroke-width="1" opacity="0.4" stroke-dasharray="6,3"/>
+  <text x="700" y="1565" text-anchor="middle" font-family="Consolas, monospace" font-size="11" fill="#00f0ff" opacity="0.6">🔄 构建失败 → Agent 根据错误日志修复 → 重新构建 → 直到成功或超过最大重试次数</text>
+
+  <!-- ============================================================ -->
+  <!-- LAYER 6: MONITORING -->
+  <!-- ============================================================ -->
+  <line x1="700" y1="1605" x2="700" y2="1650" stroke="#00f0ff" stroke-width="2" opacity="0.5" stroke-dasharray="8,4" marker-end="url(#arrowC)"/>
+
+  <rect x="140" y="1660" width="1120" height="140" rx="12" fill="#0d1a27" stroke="#00f0ff" stroke-width="1.5" opacity="0.95" filter="url(#shadowBox)"/>
+  <rect x="140" y="1660" width="1120" height="140" rx="12" fill="none" stroke="#00f0ff" stroke-width="1" opacity="0.25" filter="url(#glowCyan)"/>
+
+  <text x="700" y="1690" text-anchor="middle" font-family="Consolas, monospace" font-size="17" font-weight="bold" fill="#00e5ff">📡 监控与交付层</text>
+
+  <!-- Web Console -->
+  <rect x="170" y="1710" width="320" height="70" rx="6" fill="#0f1e2e" stroke="#00b8d4" stroke-width="0.8"/>
+  <text x="330" y="1733" text-anchor="middle" font-family="Consolas, monospace" font-size="13" font-weight="bold" fill="#00e5ff">🌐 Web Console</text>
+  <text x="330" y="1753" text-anchor="middle" font-family="Consolas, monospace" font-size="10" fill="#5a7a90">实时仪表盘 · 状态轮询 · 日志查看 · 终止任务</text>
+  <text x="330" y="1770" text-anchor="middle" font-family="Consolas, monospace" font-size="9" fill="#4a6070">http://127.0.0.1:8765 · dev/frontend/</text>
+
+  <!-- Monitor -->
+  <rect x="540" y="1710" width="320" height="70" rx="6" fill="#0f1e2e" stroke="#00b8d4" stroke-width="0.8"/>
+  <text x="700" y="1733" text-anchor="middle" font-family="Consolas, monospace" font-size="13" font-weight="bold" fill="#00e5ff">🔍 Result Monitor</text>
+  <text x="700" y="1753" text-anchor="middle" font-family="Consolas, monospace" font-size="10" fill="#5a7a90">轮询 result.json · 检测构建成功 · 更新检查状态</text>
+  <text x="700" y="1770" text-anchor="middle" font-family="Consolas, monospace" font-size="9" fill="#4a6070">monitor_results.py --loop · pipeline_monitor_lib.py</text>
+
+  <!-- Git Commit -->
+  <rect x="910" y="1710" width="320" height="70" rx="6" fill="#0f1e2e" stroke="#00b8d4" stroke-width="0.8"/>
+  <text x="1070" y="1733" text-anchor="middle" font-family="Consolas, monospace" font-size="13" font-weight="bold" fill="#00e5ff">📦 Git Auto-Commit</text>
+  <text x="1070" y="1753" text-anchor="middle" font-family="Consolas, monospace" font-size="10" fill="#5a7a90">构建成功 → 自动 commit + push</text>
+  <text x="1070" y="1770" text-anchor="middle" font-family="Consolas, monospace" font-size="9" fill="#4a6070">"feat: automate {pipeline_key}"</text>
+
+  <!-- ============================================================ -->
+  <!-- BOTTOM: APP TYPE REGISTRY -->
+  <!-- ============================================================ -->
+  <rect x="140" y="1830" width="1120" height="70" rx="10" fill="#0d1520" stroke="#1a3045" stroke-width="1" opacity="0.8"/>
+  <text x="700" y="1855" text-anchor="middle" font-family="Consolas, monospace" font-size="13" fill="#4a6070">📱 已注册 APP 基线类型</text>
+
+  <rect x="160" y="1870" width="185" height="18" rx="3" fill="#0f1a22" stroke="#5a7a90" stroke-width="0.5"/>
+  <text x="252" y="1883" text-anchor="middle" font-family="Consolas, monospace" font-size="10" fill="#7a8fa0">commonApp (通用)</text>
+
+  <rect x="355" y="1870" width="185" height="18" rx="3" fill="#0f1a22" stroke="#5a7a90" stroke-width="0.5"/>
+  <text x="447" y="1883" text-anchor="middle" font-family="Consolas, monospace" font-size="10" fill="#7a8fa0">exploreApp (内容)</text>
+
+  <rect x="550" y="1870" width="185" height="18" rx="3" fill="#0d1a24" stroke="#00b8d4" stroke-width="1"/>
+  <text x="642" y="1883" text-anchor="middle" font-family="Consolas, monospace" font-size="10" fill="#00e5ff">travelApp (出行) 🟢</text>
+
+  <rect x="745" y="1870" width="185" height="18" rx="3" fill="#0f1a22" stroke="#5a7a90" stroke-width="0.5" stroke-dasharray="3,2"/>
+  <text x="837" y="1883" text-anchor="middle" font-family="Consolas, monospace" font-size="10" fill="#5a7a90">shoppingApp (购物) ⏳</text>
+
+  <rect x="940" y="1870" width="185" height="18" rx="3" fill="#0f1a22" stroke="#5a7a90" stroke-width="0.5" stroke-dasharray="3,2"/>
+  <text x="1032" y="1883" text-anchor="middle" font-family="Consolas, monospace" font-size="10" fill="#5a7a90">deliveryApp (外卖) ⏳</text>
+
+  <!-- ============================================================ -->
+  <!-- LEGEND -->
+  <!-- ============================================================ -->
+  <rect x="140" y="1920" width="1120" height="50" rx="8" fill="#0a1018" stroke="#1a3045" stroke-width="0.5" opacity="0.7"/>
+  <circle cx="200" cy="1945" r="4" fill="#00f0ff" opacity="0.6"/>
+  <text x="215" y="1949" font-family="Consolas, monospace" font-size="10" fill="#7a8fa0">Pipeline 流程</text>
+  <circle cx="370" cy="1945" r="4" fill="#ff2d95" opacity="0.6"/>
+  <text x="385" y="1949" font-family="Consolas, monospace" font-size="10" fill="#7a8fa0">Skill 系统</text>
+  <circle cx="540" cy="1945" r="4" fill="#00ff88" opacity="0.6"/>
+  <text x="555" y="1949" font-family="Consolas, monospace" font-size="10" fill="#7a8fa0">Agent 层</text>
+  <circle cx="710" cy="1945" r="4" fill="#ffb800" opacity="0.6"/>
+  <text x="725" y="1949" font-family="Consolas, monospace" font-size="10" fill="#7a8fa0">开发 &amp; 构建</text>
+  <rect x="870" y="1941" width="100" height="8" rx="4" fill="none" stroke="#1a3045" stroke-width="1" stroke-dasharray="3,2"/>
+  <text x="985" y="1949" font-family="Consolas, monospace" font-size="10" fill="#7a8fa0">未实现 / 可扩展</text>
+  <text x="1180" y="1949" text-anchor="middle" font-family="Consolas, monospace" font-size="10" fill="#3a5060">Ver 1.0 · 2026-05</text>
+</svg>
